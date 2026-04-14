@@ -11,7 +11,7 @@
     PowerShellVersion = '5.1'
 
     # -- Root module --
-    RootModule        = 'VBServerInventory.psm1'
+    RootModule        = 'VB.ServerInventory.psm1'
 
     # -- Exports -- loader controls what gets defined, never list individual functions --
     FunctionsToExport = '*'

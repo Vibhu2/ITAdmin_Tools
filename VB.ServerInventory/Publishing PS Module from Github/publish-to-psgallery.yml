@@ -15,7 +15,7 @@
 # Just create a new folder (e.g. VBNetworkTools/) with a .psd1 and .psm1.
 # This workflow auto-detects it.
 #
-# Version: 1.0.0
+# Version: 1.0.1
 
 name: Publish to PowerShell Gallery
 
@@ -23,6 +23,10 @@ on:
   push:
     branches:
       - main          # Only publish from main — never from feature branches
+
+# Opt into Node.js 24 now to avoid deprecation warnings from actions/checkout
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   publish:

@@ -1,6 +1,6 @@
 @{
     # -- Identity --
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.1'
     GUID              = '88DE9814-273C-4FC8-852C-7B6D76D79338'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -24,7 +24,7 @@
         PSData = @{
             Tags         = @('Windows', 'Server', 'Inventory', 'AD', 'GPO', 'Security', 'Sysadmin', 'Realtime', 'VBTools')
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
-            ReleaseNotes = 'v1.0.0 -- 10-04-2026 -- Initial release. 34 functions covering System, Disk, Network, AD, GPO, Security, Apps, Printing, Services, and Scheduled Tasks.'
+            ReleaseNotes = 'v1.0.1 -- 10-04-2026 -- Initial release. 34 functions covering System, Disk, Network, AD, GPO, Security, Apps, Printing, Services, and Scheduled Tasks.'
         }
     }
 }

@@ -1,0 +1,224 @@
+# .github/workflows/publish-to-psgallery.yml
+#
+# Publishes VBServerInventory (and any future modules) to PowerShell Gallery.
+# Triggers on every push to main ONLY if files inside a module directory changed.
+#
+# REPO LAYOUT ASSUMED:
+#   ITAdmin_Tools/
+#   ├── VBServerInventory/
+#   │   ├── VBServerInventory.psd1
+#   │   ├── VBServerInventory.psm1
+#   │   └── ...
+#   └── .github/workflows/publish-to-psgallery.yml
+#
+# TO ADD A NEW MODULE LATER: no changes needed here.
+# Just create a new folder (e.g. VBNetworkTools/) with a .psd1 and .psm1.
+# This workflow auto-detects it.
+#
+# Version: 1.0.0
+
+name: Publish to PowerShell Gallery
+
+on:
+  push:
+    branches:
+      - main          # Only publish from main — never from feature branches
+
+jobs:
+  publish:
+    name: Detect and Publish Changed Modules
+    runs-on: windows-latest       # Windows runner — Publish-Module works best here
+
+    steps:
+
+      # -----------------------------------------------------------------------
+      # 1. Check out the repo with 2 commits of history so we can diff HEAD~1
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # -----------------------------------------------------------------------
+      # 2. Bootstrap PowerShellGet v2 and NuGet provider
+      #    The default runner ships with an old version — replace it.
+      # -----------------------------------------------------------------------
+      - name: Bootstrap PowerShellGet
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
+          # Install NuGet provider if missing
+          if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
+              Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
+          }
+
+          # Install PowerShellGet 2.x if not already at 2.2.5+
+          $pg = Get-Module -ListAvailable -Name PowerShellGet |
+                Sort-Object Version -Descending | Select-Object -First 1
+          if (-not $pg -or $pg.Version -lt [version]'2.2.5') {
+              Install-Module -Name PowerShellGet -MinimumVersion 2.2.5 -Force -Scope CurrentUser -AllowClobber
+          }
+
+          Import-Module PowerShellGet -MinimumVersion 2.2.5 -Force
+          Write-Host "PowerShellGet: $((Get-Module PowerShellGet).Version)"
+
+      # -----------------------------------------------------------------------
+      # 3. Detect which module directories changed in this push.
+      #    A "module directory" = any root-level folder that contains a .psd1
+      #    whose name matches the folder name.
+      #    Excludes: .github, .git, and any folder without a matching .psd1.
+      # -----------------------------------------------------------------------
+      - name: Detect changed modules
+        id: detect
+        shell: pwsh
+        run: |
+          # Handle edge case: first-ever commit has no parent
+          $hasParent = git rev-parse --verify HEAD~1 2>$null
+          if ($hasParent) {
+              $changedFiles = git diff --name-only HEAD~1 HEAD
+          } else {
+              Write-Host "First commit detected — treating all modules as changed."
+              $changedFiles = git ls-files
+          }
+
+          Write-Host "Changed files in this push:"
+          $changedFiles | ForEach-Object { Write-Host "  $_" }
+
+          # Find root-level folders that have a matching .psd1 (i.e., real PS modules)
+          # Pattern: any path whose first segment is a folder containing ModuleName.psd1
+          $changedModules = $changedFiles |
+              Where-Object { $_ -match '^([^/]+)/' } |
+              ForEach-Object { $Matches[1] } |
+              Sort-Object -Unique |
+              Where-Object {
+                  # Must not be a meta-folder
+                  $_ -notmatch '^\.' -and
+                  # Must have a matching .psd1 — confirms it's a PS module folder
+                  (Test-Path "$_/$_.psd1")
+              }
+
+          if ($changedModules.Count -eq 0) {
+              Write-Host "No PowerShell module directories changed. Nothing to publish."
+              echo "modules=" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+              $list = $changedModules -join ','
+              Write-Host "Modules to process: $list"
+              echo "modules=$list" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      # -----------------------------------------------------------------------
+      # 4. Validate and publish each changed module.
+      #    - Skips if the version already exists on Gallery (safe re-push)
+      #    - Retries up to 3 times on transient failures
+      #    - One module failing does NOT block others
+      # -----------------------------------------------------------------------
+      - name: Publish changed modules
+        if: steps.detect.outputs.modules != ''
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          Import-Module PowerShellGet -MinimumVersion 2.2.5 -Force
+
+          $moduleNames    = '${{ steps.detect.outputs.modules }}' -split ','
+          $publishedCount = 0
+          $skippedCount   = 0
+          $failedCount    = 0
+          $failedModules  = @()
+
+          foreach ($moduleName in $moduleNames) {
+              $modulePath   = $moduleName                      # e.g. "VBServerInventory"
+              $manifestPath = "$modulePath/$moduleName.psd1"  # e.g. "VBServerInventory/VBServerInventory.psd1"
+
+              Write-Host ""
+              Write-Host "========================================"
+              Write-Host "Processing: $moduleName"
+              Write-Host "========================================"
+
+              # --- Guard: manifest must exist ---
+              if (-not (Test-Path $manifestPath)) {
+                  Write-Warning "No manifest at $manifestPath — skipping."
+                  $skippedCount++
+                  continue
+              }
+
+              # --- Validate manifest is well-formed ---
+              try {
+                  $manifest     = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
+                  $localVersion = $manifest.Version
+                  Write-Host "Local version : $localVersion"
+              }
+              catch {
+                  Write-Error "Manifest validation FAILED for $moduleName`: $_"
+                  $failedCount++
+                  $failedModules += $moduleName
+                  continue
+              }
+
+              # --- Check if this exact version is already on Gallery ---
+              try {
+                  $existing = Find-Module -Name $moduleName `
+                                          -RequiredVersion $localVersion `
+                                          -Repository PSGallery `
+                                          -ErrorAction SilentlyContinue
+                  if ($existing) {
+                      Write-Host "Version $localVersion already on PSGallery — skipping (no action needed)."
+                      $skippedCount++
+                      continue
+                  }
+              }
+              catch {
+                  Write-Host "Module not yet on Gallery or version not found — proceeding with publish."
+              }
+
+              # --- Publish with retry (3 attempts, 15s back-off) ---
+              $maxAttempts = 3
+              $attempt     = 0
+              $published   = $false
+
+              while ($attempt -lt $maxAttempts -and -not $published) {
+                  $attempt++
+                  Write-Host "Publish attempt $attempt of $maxAttempts..."
+
+                  try {
+                      Publish-Module -Path $modulePath `
+                                     -NuGetApiKey $env:PSGALLERY_API_KEY `
+                                     -Repository PSGallery `
+                                     -Force `
+                                     -ErrorAction Stop
+
+                      Write-Host "SUCCESS: Published $moduleName v$localVersion to PSGallery"
+                      $published = $true
+                      $publishedCount++
+                  }
+                  catch {
+                      Write-Warning "Attempt $attempt failed: $_"
+                      if ($attempt -lt $maxAttempts) {
+                          Write-Host "Waiting 15s before retry..."
+                          Start-Sleep -Seconds 15
+                      }
+                  }
+              }
+
+              if (-not $published) {
+                  Write-Error "FAILED to publish $moduleName after $maxAttempts attempts."
+                  $failedCount++
+                  $failedModules += $moduleName
+              }
+          }
+
+          # --- Final summary ---
+          Write-Host ""
+          Write-Host "========================================"
+          Write-Host "PUBLISH SUMMARY"
+          Write-Host "========================================"
+          Write-Host "Published : $publishedCount"
+          Write-Host "Skipped   : $skippedCount (already on Gallery or no manifest)"
+          Write-Host "Failed    : $failedCount"
+          if ($failedModules.Count -gt 0) {
+              Write-Host "Failed modules: $($failedModules -join ', ')"
+          }
+
+          # Fail the job if anything didn't publish
+          if ($failedCount -gt 0) { exit 1 }

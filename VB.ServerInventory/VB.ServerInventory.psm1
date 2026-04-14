@@ -1,5 +1,5 @@
 # ============================================================
-# MODULE  : VBServerInventory.psm1
+# MODULE  : VB.ServerInventory.psm1
 # VERSION : 1.0.0
 # CHANGED : 10-04-2026 -- Initial release
 # AUTHOR  : Vibhu Bhatnagar

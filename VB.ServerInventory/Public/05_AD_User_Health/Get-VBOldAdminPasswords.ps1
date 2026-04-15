@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBOldAdminPasswords
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Get Domain Admins with passwords older than threshold
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -32,7 +32,7 @@
     [PSCustomObject]: ComputerName, Name, SamAccountName, Enabled, PasswordLastSet, Status, CollectionTime
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD User Health
 #>

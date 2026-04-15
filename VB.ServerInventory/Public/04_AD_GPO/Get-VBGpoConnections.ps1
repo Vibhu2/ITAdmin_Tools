@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBGpoConnections
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Reports all GPO connections to organizational units including enforcement status
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -35,7 +35,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD / GPO
 #>

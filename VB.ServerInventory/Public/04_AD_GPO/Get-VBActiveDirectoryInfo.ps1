@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBActiveDirectoryInfo
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Collects comprehensive Active Directory information including domain controllers, servers, FSMO roles, users, and security status
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -38,7 +38,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD / GPO
 #>

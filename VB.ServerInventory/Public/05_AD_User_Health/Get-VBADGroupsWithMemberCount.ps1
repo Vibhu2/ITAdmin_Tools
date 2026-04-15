@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBADGroupsWithMemberCount
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Get Active Directory groups with member count
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -28,7 +28,7 @@
     [PSCustomObject]: ComputerName, SamAccountName, MemberCount, Created, Modified, Status, CollectionTime
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD User Health
 #>

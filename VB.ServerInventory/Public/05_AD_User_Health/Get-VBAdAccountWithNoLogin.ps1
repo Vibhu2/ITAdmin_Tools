@@ -52,7 +52,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD User Health
 #>

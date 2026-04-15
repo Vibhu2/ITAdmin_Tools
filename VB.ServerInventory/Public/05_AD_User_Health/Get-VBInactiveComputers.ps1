@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBInactiveComputers
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Get Active Directory computers inactive for 90+ days
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -28,7 +28,7 @@
     [PSCustomObject]: ComputerName, Name, DNSHostName, LastLogonDate, IPAddress, Status, CollectionTime
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD User Health
 #>

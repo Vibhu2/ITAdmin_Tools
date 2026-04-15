@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBGPOComprehensiveReport
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Generates comprehensive GPO report with all link scopes and configurations
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -42,7 +42,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD / GPO
 #>

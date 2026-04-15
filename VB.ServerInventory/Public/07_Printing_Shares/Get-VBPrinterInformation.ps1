@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBPrinterInformation
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Enumerate printers and driver information on local and remote systems
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -36,7 +36,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Printing
 #>

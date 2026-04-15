@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBSystemInfo
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieves comprehensive system information from local or remote computers
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -48,7 +48,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : System Hardware
 #>

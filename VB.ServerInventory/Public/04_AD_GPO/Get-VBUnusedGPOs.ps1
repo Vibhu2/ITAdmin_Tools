@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBUnusedGPOs
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Identifies Group Policy Objects that are not linked to any domain or OU
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -35,7 +35,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD / GPO
 #>

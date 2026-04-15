@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBAzureADJoinStatusSimple
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Simple yes/no Azure AD join status indicator
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -39,7 +39,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Security
 #>

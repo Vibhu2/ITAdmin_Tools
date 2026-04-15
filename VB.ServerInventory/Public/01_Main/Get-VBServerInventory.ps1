@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBServerInventory
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release (orchestrator rewrite)
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Orchestrates full server inventory by calling all VB inventory functions
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
@@ -91,7 +91,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Main / Orchestrator
 #>

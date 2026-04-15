@@ -2,7 +2,7 @@
 # FUNCTION : Get-VBDNSServerInfo
 # VERSION  : 1.0.0
 # CHANGED  : 10-04-2026 -- VB-compliant refactor and cleanup
-# AUTHOR   : Vibhu
+# AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Collect comprehensive DNS server configuration
 # ENCODING : UTF-8 with BOM
 # ============================================================
@@ -41,7 +41,7 @@
 
 .NOTES
     Version  : 1.0.0
-    Author   : Vibhu
+    Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Services
 #>

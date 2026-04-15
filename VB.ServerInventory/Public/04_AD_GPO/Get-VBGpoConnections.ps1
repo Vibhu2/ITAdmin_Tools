@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBGpoConnections
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Reports all GPO connections to organizational units including enforcement status
@@ -34,7 +34,7 @@
     [PSCustomObject]: ComputerName, GPO, OU, Enforced, LinkOrder, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD / GPO

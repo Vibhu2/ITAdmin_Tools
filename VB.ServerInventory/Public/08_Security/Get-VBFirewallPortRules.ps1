@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBFirewallPortRules
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieve Windows Firewall port rules from target computer
@@ -66,7 +66,7 @@
                      CollectionTime (plus optional detailed properties)
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Security

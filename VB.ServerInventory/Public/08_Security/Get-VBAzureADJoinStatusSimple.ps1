@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBAzureADJoinStatusSimple
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Simple yes/no Azure AD join status indicator
@@ -38,7 +38,7 @@
     [PSCustomObject]: ComputerName, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Security

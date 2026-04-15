@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBUserFolderRedirections
 # MODULE   : WorkstationReport
-# VERSION  : 1.1.1
+# VERSION  : 1.3.0
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Audits folder redirections for all user profiles on local or remote computers
@@ -85,7 +85,7 @@ function Get-VBUserFolderRedirections {
     - Error                : Error message (only present on failure)
 
     .NOTES
-    Version : 1.1.1
+    Version : 1.3.0
     Author  : Vibhu Bhatnagar
     Category: User Profile Management
 

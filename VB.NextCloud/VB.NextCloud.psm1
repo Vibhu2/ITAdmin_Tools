@@ -1,7 +1,7 @@
 # ============================================================
 # MODULE  : VB.NextCloud.psm1
-# VERSION : 1.0.0
-# CHANGED : 15-04-2026 -- Initial release
+# VERSION : 1.2.0
+# CHANGED : 15-04-2026 -- Initial PSGallery release
 # AUTHOR  : Vibhu Bhatnagar
 # PURPOSE : Module loader -- zero logic here
 # ENCODING: UTF-8 with BOM

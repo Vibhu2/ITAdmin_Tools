@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBInactiveUsers
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Get Active Directory users inactive for 90+ days
@@ -27,7 +27,7 @@
 .OUTPUTS
     [PSCustomObject]: ComputerName, Name, SamAccountName, LastLogonDate, Status, CollectionTime
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD User Health

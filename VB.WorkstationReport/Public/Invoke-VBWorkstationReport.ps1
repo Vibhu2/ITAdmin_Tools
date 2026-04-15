@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Invoke-VBWorkstationReport
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.1
+# VERSION  : 1.3.0
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Orchestrates workstation data collection and uploads reports to Nextcloud
@@ -77,7 +77,7 @@ function Invoke-VBWorkstationReport {
     - CollectionTime  : Timestamp of the run
 
     .NOTES
-    Version : 1.1.1
+    Version : 1.3.0
     Author  : Vibhu Bhatnagar
     Category: Windows Workstation Administration
 

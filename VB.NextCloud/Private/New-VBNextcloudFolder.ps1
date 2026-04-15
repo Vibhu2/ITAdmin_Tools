@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : New-VBNextcloudFolder
 # MODULE   : VB.NextCloud
-# VERSION  : 1.1.2
+# VERSION  : 1.2.0
 # CHANGED  : 15-04-2026 -- Updated caller reference to Start-VBNextcloudUpload
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Creates a folder on Nextcloud via WebDAV MKCOL (private helper)
@@ -55,7 +55,7 @@ function New-VBNextcloudFolder {
     - CollectionTime : Timestamp of the operation
 
     .NOTES
-    Version : 1.1.1
+    Version : 1.2.0
     Author  : Vibhu Bhatnagar
 
     Private function -- not exported by the module. Called internally by Start-VBNextcloudUpload.

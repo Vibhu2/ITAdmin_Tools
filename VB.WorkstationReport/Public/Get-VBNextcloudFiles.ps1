@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBNextcloudFiles
 # MODULE   : WorkstationReport
-# VERSION  : 1.1.1
+# VERSION  : 1.3.0
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Lists files and folders in a Nextcloud directory via WebDAV PROPFIND
@@ -61,7 +61,7 @@ function Get-VBNextcloudFiles {
     - Error        : Error message (only present on failure)
 
     .NOTES
-    Version : 1.1.1
+    Version : 1.3.0
     Author  : Vibhu Bhatnagar
 
     Requirements:

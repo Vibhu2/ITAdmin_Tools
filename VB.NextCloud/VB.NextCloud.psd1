@@ -1,6 +1,6 @@
 @{
     # -- Identity --
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.2.0'
     GUID              = 'c2e4f1a3-8b7d-4e9f-a1c5-3d6e8f2b0a4c'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -24,7 +24,7 @@
         PSData = @{
             Tags         = @('Nextcloud', 'WebDAV', 'Upload', 'CloudStorage', 'Sysadmin', 'Realtime', 'VBTools')
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
-            ReleaseNotes = 'v1.0.0 -- 15-04-2026 -- Initial release. Set-VBNextcloudFile (single file WebDAV PUT) and Start-VBNextcloudUpload (batch wrapper with auto folder creation).'
+            ReleaseNotes = 'v1.2.0 -- 15-04-2026 -- Initial PSGallery release. Set-VBNextcloudFile (single file WebDAV PUT), Start-VBNextcloudUpload (batch wrapper with auto folder creation), New-VBNextcloudFolder (private helper).'
         }
     }
 }

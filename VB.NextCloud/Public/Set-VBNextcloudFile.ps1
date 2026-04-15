@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Set-VBNextcloudFile
 # MODULE   : VB.NextCloud
-# VERSION  : 1.1.1
+# VERSION  : 1.2.0
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Uploads a single file to Nextcloud via WebDAV PUT
@@ -74,7 +74,7 @@ function Set-VBNextcloudFile {
     - CollectionTime : Timestamp of the operation
 
     .NOTES
-    Version : 1.1.1
+    Version : 1.2.0
     Author  : Vibhu Bhatnagar
 
     Requirements:

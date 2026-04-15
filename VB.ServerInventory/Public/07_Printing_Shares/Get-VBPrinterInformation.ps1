@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBPrinterInformation
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Enumerate printers and driver information on local and remote systems
@@ -35,7 +35,7 @@
     [PSCustomObject]: ComputerName, PrinterName, DriverName, PortName, Published, Shared, ShareName, Type, DeviceType, Manufacturer, InfPath, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Printing

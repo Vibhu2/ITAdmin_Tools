@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBPrintPrintingInfo
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Comprehensive print job analysis and printer monitoring
@@ -55,7 +55,7 @@
     [PSCustomObject]: ComputerName, TimeCreated, EventID, Source, PrinterName, UserName, ClientMachine, DocumentName, PagesPrinted, JobSize, RawMessage, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Printing

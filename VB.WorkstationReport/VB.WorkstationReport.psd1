@@ -1,12 +1,12 @@
 #
 # VB.WorkstationReport.psd1 -- Module manifest
-# Version : 1.2.0
+# Version : 1.3.0
 # Author  : Vibhu Bhatnagar
 #
 
 @{
     # Module identity
-    ModuleVersion     = '1.2.0'
+    ModuleVersion     = '1.3.0'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -32,6 +32,7 @@
             Tags         = @('Workstation', 'Reporting', 'Nextcloud', 'Printers', 'FolderRedirection', 'SyncCenter')
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
             ReleaseNotes = @'
+v1.3.0 -- 15-04-2026 -- Module renamed to VB.WorkstationReport, RequiredModules VB.NextCloud added, Author standardised to Vibhu Bhatnagar.
 v1.2.0 -- 15-04-2026 -- Function rename for clarity
 - Renamed: Set-VBNextcloudFiles -> Start-VBNextcloudUpload (batch upload orchestrator)
 - Set-VBNextcloudFile (single file PUT) remains unchanged

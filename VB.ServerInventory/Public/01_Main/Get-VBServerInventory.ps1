@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBServerInventory
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release (orchestrator rewrite)
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Orchestrates full server inventory by calling all VB inventory functions
@@ -90,7 +90,7 @@
     [PSCustomObject]: Section, ComputerName, Data (PSCustomObject array per section)
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Main / Orchestrator

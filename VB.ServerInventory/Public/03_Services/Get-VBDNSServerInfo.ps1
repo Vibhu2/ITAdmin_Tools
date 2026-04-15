@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBDNSServerInfo
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- VB-compliant refactor and cleanup
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Collect comprehensive DNS server configuration
@@ -40,7 +40,7 @@
     Zones, Forwarders, NetworkAdapters, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : Services

@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBUnusedGPOs
-# VERSION  : 1.0.0
+# VERSION  : 1.0.2
 # CHANGED  : 10-04-2026 -- Initial VB-compliant release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Identifies Group Policy Objects that are not linked to any domain or OU
@@ -34,7 +34,7 @@
     [PSCustomObject]: ComputerName, Name, UserVersion, ComputerVersion, Created, Modified, ID, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.2
     Author   : Vibhu Bhatnagar
     Modified : 10-04-2026
     Category : AD / GPO

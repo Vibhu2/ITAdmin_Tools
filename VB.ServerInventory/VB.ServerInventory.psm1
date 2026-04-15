@@ -1,7 +1,7 @@
 # ============================================================
 # MODULE  : VB.ServerInventory.psm1
-# VERSION : 1.0.0
-# CHANGED : 10-04-2026 -- Initial release
+# VERSION : 1.0.2
+# CHANGED : 15-04-2026 -- Author standardised to Vibhu Bhatnagar across all functions
 # AUTHOR  : Vibhu Bhatnagar
 # PURPOSE : Module loader -- zero logic here
 # ENCODING: UTF-8 with BOM

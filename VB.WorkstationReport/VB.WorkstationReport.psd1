@@ -16,8 +16,9 @@
     # Root module
     RootModule        = 'VB.WorkstationReport.psm1'
 
-    # Dependencies
-    RequiredModules   = @('VB.NextCloud')
+    # Note: VB.NextCloud is a soft dependency (required at runtime by Invoke-VBWorkstationReport).
+    # It is not listed in RequiredModules to avoid Test-ModuleManifest failures on systems
+    # where VB.NextCloud is not yet installed. Install it separately: Install-Module VB.NextCloud
 
     # Exported functions -- loader controls exports dynamically, never list individually
     FunctionsToExport = '*'
@@ -32,7 +33,7 @@
             Tags         = @('Workstation', 'Reporting', 'Nextcloud', 'Printers', 'FolderRedirection', 'SyncCenter')
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
             ReleaseNotes = @'
-v1.3.0 -- 15-04-2026 -- Module renamed to VB.WorkstationReport, RequiredModules VB.NextCloud added, Author standardised to Vibhu Bhatnagar.
+v1.3.0 -- 15-04-2026 -- Module renamed to VB.WorkstationReport. VB.NextCloud declared as soft runtime dependency. Author standardised to Vibhu Bhatnagar.
 v1.2.0 -- 15-04-2026 -- Function rename for clarity
 - Renamed: Set-VBNextcloudFiles -> Start-VBNextcloudUpload (batch upload orchestrator)
 - Set-VBNextcloudFile (single file PUT) remains unchanged

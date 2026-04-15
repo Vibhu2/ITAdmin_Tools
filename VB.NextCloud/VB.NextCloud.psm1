@@ -1,7 +1,7 @@
 # ============================================================
 # MODULE  : VB.NextCloud.psm1
-# VERSION : 1.2.0
-# CHANGED : 15-04-2026 -- Initial PSGallery release
+# VERSION : 1.3.0
+# CHANGED : 15-04-2026 -- Added Get-VBNextcloudFiles (moved from VB.WorkstationReport)
 # AUTHOR  : Vibhu Bhatnagar
 # PURPOSE : Module loader -- zero logic here
 # ENCODING: UTF-8 with BOM

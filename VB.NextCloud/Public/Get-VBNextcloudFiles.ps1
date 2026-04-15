@@ -1,6 +1,6 @@
 # ============================================================
 # FUNCTION : Get-VBNextcloudFiles
-# MODULE   : WorkstationReport
+# MODULE   : VB.NextCloud
 # VERSION  : 1.3.0
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
@@ -62,6 +62,7 @@ function Get-VBNextcloudFiles {
 
     .NOTES
     Version : 1.3.0
+    Module  : VB.NextCloud
     Author  : Vibhu Bhatnagar
 
     Requirements:

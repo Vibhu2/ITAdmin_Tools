@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 # ============================================================
 # VB.WorkstationReport.psm1 -- loader only, zero logic here
-# Version : 1.3.0
+# Version : 1.3.1
 # Author  : Vibhu Bhatnagar
 # ============================================================
 

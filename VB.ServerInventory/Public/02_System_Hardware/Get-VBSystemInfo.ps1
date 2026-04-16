@@ -64,7 +64,6 @@ function Get-VBSystemInfo {
     )
 
     begin {
-        # Step 0 -- Load firmware type API definition once
         if (-not ([System.Management.Automation.PSTypeName]'FirmwareType').Type) {
             Add-Type -TypeDefinition @"
 using System;
@@ -80,7 +79,6 @@ public class FirmwareType {
     process {
         foreach ($computer in $ComputerName) {
             try {
-                # Step 1 -- Local vs remote determination and data collection
                 if ($computer -eq $env:COMPUTERNAME) {
                     # Local collection
                     $OS = Get-CimInstance -ClassName Win32_OperatingSystem
@@ -89,12 +87,40 @@ public class FirmwareType {
                     $Processor = Get-CimInstance -ClassName Win32_Processor | Select-Object -First 1
                     $TimeZone = Get-CimInstance -ClassName Win32_TimeZone
                     $Registry = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue
+                    
+                    # Network info
                     $NetAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch 'Loopback|vEthernet' } | Select-Object -First 1
                     $IPAddress = $NetAdapter.IPAddress
                     $NetConfig = Get-NetIPConfiguration -InterfaceIndex $NetAdapter.InterfaceIndex
-                    $DHCPStatus = if ($NetConfig.NetIPv4Interface.Dhcp -eq 'Enabled') { 'DHCP' } else { 'Static' }
+                    $DHCPStatus = if ($NetConfig.NetIPv4Interface.Dhcp -eq 'Enabled') { 'Enabled' } else { 'Disabled' }
+                    $DNSServers = ($NetConfig.DnsServer.ServerAddresses -join ', ')
+                    
+                    # Get DNS suffix from multiple sources
+                    $DNSSuffix = $NetConfig.DnsSuffix
+                    if (-not $DNSSuffix) {
+                        $DNSSuffixSearch = Get-DnsClientGlobalSetting -ErrorAction SilentlyContinue
+                        $DNSSuffix = $DNSSuffixSearch.SuffixSearchList[0]
+                    }
+                    
+                    # DHCP lease info from registry (more reliable)
+                    $DHCPLeaseInfo = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Dhcp\Parameters\Interfaces" -ErrorAction SilentlyContinue | ForEach-Object {
+                        Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue | Select-Object -First 1
+                    }
+                    $DHCPServer = $DHCPLeaseInfo.DhcpServer
+                    $DHCPLeaseObtained = if ($DHCPLeaseInfo.LeaseObtainedTime) { 
+                        [DateTime]::FromFileTime($DHCPLeaseInfo.LeaseObtainedTime).ToString('g') 
+                    }
+                    else { 
+                        'N/A' 
+                    }
+                    $DHCPLeaseExpires = if ($DHCPLeaseInfo.T1) { 
+                        [DateTime]::FromFileTime($DHCPLeaseInfo.T1).ToString('g') 
+                    }
+                    else { 
+                        'N/A' 
+                    }
 
-                    # Get BIOS type via native API
+                    # Firmware type
                     $fw = 0
                     [FirmwareType]::GetFirmwareType([ref]$fw) | Out-Null
                     $BIOSType = switch ($fw) {
@@ -102,8 +128,11 @@ public class FirmwareType {
                         2 { "UEFI" }
                         default { "Unknown" }
                     }
-                } else {
-                    # Step 2 -- Remote collection setup
+
+                    $LogonServer = $env:LOGONSERVER
+                }
+                else {
+                    # Remote collection
                     $CimParams = @{
                         ComputerName = $computer
                         ErrorAction  = 'Stop'
@@ -117,7 +146,7 @@ public class FirmwareType {
                     $Processor = Get-CimInstance -CimSession $Session -ClassName Win32_Processor | Select-Object -First 1
                     $TimeZone = Get-CimInstance -CimSession $Session -ClassName Win32_TimeZone
 
-                    # Step 3 -- Remote script block execution (includes firmware type detection)
+                    # Remote script block with registry-based DHCP info
                     $InvokeParams = @{
                         ComputerName = $computer
                         ScriptBlock  = {
@@ -125,9 +154,35 @@ public class FirmwareType {
                             $NetAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch 'Loopback|vEthernet' } | Select-Object -First 1
                             $IPAddress = $NetAdapter.IPAddress
                             $NetConfig = Get-NetIPConfiguration -InterfaceIndex $NetAdapter.InterfaceIndex
-                            $DHCPStatus = if ($NetConfig.NetIPv4Interface.Dhcp -eq 'Enabled') { 'DHCP' } else { 'Static' }
+                            $DHCPStatus = if ($NetConfig.NetIPv4Interface.Dhcp -eq 'Enabled') { 'Enabled' } else { 'Disabled' }
+                            $DNSServers = ($NetConfig.DnsServer.ServerAddresses -join ', ')
+                            
+                            # DNS suffix
+                            $DNSSuffix = $NetConfig.DnsSuffix
+                            if (-not $DNSSuffix) {
+                                $DNSSuffixSearch = Get-DnsClientGlobalSetting -ErrorAction SilentlyContinue
+                                $DNSSuffix = $DNSSuffixSearch.SuffixSearchList[0]
+                            }
+                            
+                            # DHCP lease from registry
+                            $DHCPLeaseInfo = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Dhcp\Parameters\Interfaces" -ErrorAction SilentlyContinue | ForEach-Object {
+                                Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue | Select-Object -First 1
+                            }
+                            $DHCPServer = $DHCPLeaseInfo.DhcpServer
+                            $DHCPLeaseObtained = if ($DHCPLeaseInfo.LeaseObtainedTime) { 
+                                [DateTime]::FromFileTime($DHCPLeaseInfo.LeaseObtainedTime).ToString('g') 
+                            }
+                            else { 
+                                'N/A' 
+                            }
+                            $DHCPLeaseExpires = if ($DHCPLeaseInfo.T1) { 
+                                [DateTime]::FromFileTime($DHCPLeaseInfo.T1).ToString('g') 
+                            }
+                            else { 
+                                'N/A' 
+                            }
 
-                            # Get firmware type via native API
+                            # Firmware type
                             if (-not ([System.Management.Automation.PSTypeName]'FirmwareType').Type) {
                                 Add-Type -TypeDefinition @"
 using System;
@@ -146,11 +201,19 @@ public class FirmwareType {
                                 default { "Unknown" }
                             }
 
+                            $LogonServer = $env:LOGONSERVER
+
                             return @{
-                                IPAddress  = $IPAddress
-                                DHCPStatus = $DHCPStatus
-                                Registry   = $Registry
-                                BIOSType   = $BIOSType
+                                IPAddress         = $IPAddress
+                                DHCPStatus        = $DHCPStatus
+                                DNSServers        = $DNSServers
+                                DNSSuffix         = $DNSSuffix
+                                DHCPServer        = $DHCPServer
+                                DHCPLeaseObtained = $DHCPLeaseObtained
+                                DHCPLeaseExpires  = $DHCPLeaseExpires
+                                BIOSType          = $BIOSType
+                                LogonServer       = $LogonServer
+                                Registry          = $Registry
                             }
                         }
                     }
@@ -158,34 +221,24 @@ public class FirmwareType {
                     $RemoteData = Invoke-Command @InvokeParams
                     $IPAddress = $RemoteData.IPAddress
                     $DHCPStatus = $RemoteData.DHCPStatus
-                    $Registry = $RemoteData.Registry
+                    $DNSServers = $RemoteData.DNSServers
+                    $DNSSuffix = $RemoteData.DNSSuffix
+                    $DHCPServer = $RemoteData.DHCPServer
+                    $DHCPLeaseObtained = $RemoteData.DHCPLeaseObtained
+                    $DHCPLeaseExpires = $RemoteData.DHCPLeaseExpires
                     $BIOSType = $RemoteData.BIOSType
+                    $LogonServer = $RemoteData.LogonServer
+                    $Registry = $RemoteData.Registry
 
                     Remove-CimSession -CimSession $Session
                 }
 
-                # Step 4 -- Output object construction
+                # Output object
                 $SystemInfo = [PSCustomObject]@{
-                    ComputerName                 = $computer
-                    DNSHostname                  = $CS.DNSHostName
-                    PrimaryIP                    = $IPAddress
-                    IPAssignment                 = $DHCPStatus
-                    OSName                       = $OS.Caption
-                    OSVersion                    = $OS.Version
-                    OSBuild                      = $OS.BuildNumber
-                    OSDisplayVersion             = if ($Registry.DisplayVersion) { $Registry.DisplayVersion } else { $OS.BuildNumber }
-                    OSInstallDate                = $OS.InstallDate
-                    WindowsVersion               = if ($Registry.ReleaseId) { $Registry.ReleaseId } elseif ($Registry.DisplayVersion) { $Registry.DisplayVersion } else { $OS.Version }
-                    HardwareAbstractionLayer     = $OS.Version
-                    BIOSVersion                  = $BIOS.SMBIOSBIOSVersion
-                    BIOSManufacturer             = $BIOS.Manufacturer
-                    BIOSSerialNumber             = $BIOS.SerialNumber
-                    BIOSReleaseDate              = $BIOS.ReleaseDate
-                    SystemManufacturer           = $CS.Manufacturer
-                    SystemModel                  = $CS.Model
-                    BIOSType                     = $BIOSType
-                    Domain                       = $CS.Domain
-                    DomainRole                   = switch ($CS.DomainRole) {
+                    ComputerName       = $computer
+                    DNSHostname        = $CS.DNSHostName
+                    Domain             = $CS.Domain
+                    DomainRole         = switch ($CS.DomainRole) {
                         0 { 'Standalone Workstation' }
                         1 { 'Member Workstation' }
                         2 { 'Standalone Server' }
@@ -194,29 +247,40 @@ public class FirmwareType {
                         5 { 'Primary Domain Controller' }
                         default { $CS.DomainRole }
                     }
-                    Processor                    = $Processor.Name
-                    Cores                        = $Processor.NumberOfCores
-                    LogicalProcessors            = $Processor.NumberOfLogicalProcessors
-                    TotalMemoryGB                = [math]::Round($CS.TotalPhysicalMemory / 1GB, 2)
-                    FreeMemoryGB                 = [math]::Round($OS.FreePhysicalMemory / 1MB, 2)
-                    OSServerLevel                = switch ($OS.ProductType) {
-                        1 { 'Workstation' }
-                        2 { 'Domain Controller' }
-                        3 { 'Server' }
-                        default { $OS.ProductType }
-                    }
-                    LogonServer                  = $env:LOGONSERVER
-                    TimeZone                     = $TimeZone.StandardName
-                    LastBootTime                 = $OS.LastBootUpTime
-                    Status                       = 'Success'
-                    CollectionTime               = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    LogonServer        = $LogonServer
+                    PrimaryIP          = $IPAddress
+                    DHCPStatus         = $DHCPStatus
+                    DHCPServer         = $DHCPServer
+                    DHCPLeaseObtained  = $DHCPLeaseObtained
+                    DHCPLeaseExpires   = $DHCPLeaseExpires
+                    DNSServers         = $DNSServers
+                    DNSSuffix          = $DNSSuffix
+                    OSName             = $OS.Caption
+                    OSVersion          = $OS.Version
+                    OSBuild            = $OS.BuildNumber
+                    OSDisplayVersion   = if ($Registry.DisplayVersion) { $Registry.DisplayVersion } else { $OS.BuildNumber }
+                    OSInstallDate      = $OS.InstallDate
+                    SystemManufacturer = $CS.Manufacturer
+                    SystemModel        = $CS.Model
+                    Processor          = $Processor.Name
+                    Cores              = $Processor.NumberOfCores
+                    LogicalProcessors  = $Processor.NumberOfLogicalProcessors
+                    TotalMemoryGB      = [math]::Round($CS.TotalPhysicalMemory / 1GB, 2)
+                    FreeMemoryGB       = [math]::Round($OS.FreePhysicalMemory / 1MB, 2)
+                    BIOSType           = $BIOSType
+                    BIOSVersion        = $BIOS.SMBIOSBIOSVersion
+                    BIOSManufacturer   = $BIOS.Manufacturer
+                    BIOSSerialNumber   = $BIOS.SerialNumber
+                    BIOSReleaseDate    = $BIOS.ReleaseDate
+                    TimeZone           = $TimeZone.StandardName
+                    LastBootTime       = $OS.LastBootUpTime
+                    Status             = 'Success'
+                    CollectionTime     = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                 }
 
-                # Step 5 -- Return object
                 $SystemInfo
             }
             catch {
-                # Step 6 -- Error handling
                 [PSCustomObject]@{
                     ComputerName   = $computer
                     Error          = $_.Exception.Message

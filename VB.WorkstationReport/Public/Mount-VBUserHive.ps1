@@ -1,4 +1,28 @@
 function Mount-VBUserHive {
+    <#
+    .SYNOPSIS
+        Mount a user's NTUSER.DAT hive to the registry for offline editing.
+    .DESCRIPTION
+        Resolves a user profile by SID, Username, or ProfilePath and mounts the associated
+        NTUSER.DAT hive to HKEY_USERS. Works locally or remotely via Invoke-Command.
+        Returns detailed status including whether the hive was newly mounted or already loaded.
+    .PARAMETER SID
+        User security identifier (e.g., S-1-5-21-...).
+    .PARAMETER Username
+        Username to resolve (domain\user or local user format).
+    .PARAMETER ProfilePath
+        Direct path to the user profile (overrides auto-resolution).
+    .PARAMETER ComputerName
+        Target computer name. Default is local machine.
+    .PARAMETER Credential
+        Credentials for remote operations on $ComputerName.
+    .EXAMPLE
+        Mount-VBUserHive -Username 'contoso\jdoe'
+    .EXAMPLE
+        Get-ADUser jdoe | Mount-VBUserHive -ComputerName SERVER01
+    .VERSION
+        v1.0 - 2026-04-16
+    #>
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipelineByPropertyName)]
@@ -18,187 +42,98 @@ function Mount-VBUserHive {
 
     process {
         try {
-            # Get all user profiles first to resolve SID/Username/ProfilePath
-            if ($ComputerName -eq $env:COMPUTERNAME) {
-                $allProfiles = Get-CimInstance -ClassName Win32_UserProfile -Filter "Special = 'False'" -ErrorAction Stop
-            }
-            else {
-                $allProfiles = Get-CimInstance -ClassName Win32_UserProfile -Filter "Special = 'False'" -ComputerName $ComputerName -Credential $Credential -ErrorAction Stop
+            #region --- Resolve Profile ---
+            
+            $allProfiles = @{
+                Local  = { Get-CimInstance -ClassName Win32_UserProfile -Filter "Special = 'False'" -ErrorAction Stop }
+                Remote = { Get-CimInstance -ClassName Win32_UserProfile -Filter "Special = 'False'" -ComputerName $ComputerName -Credential $Credential -ErrorAction Stop }
             }
 
-            # Resolve profile information based on input
+            $profiles = if ($ComputerName -eq $env:COMPUTERNAME) { & $allProfiles.Local } else { & $allProfiles.Remote }
             $targetProfile = $null
 
             if ($SID) {
-                $targetProfile = $allProfiles | Where-Object { $_.SID -eq $SID }
+                $targetProfile = $profiles | Where-Object { $_.SID -eq $SID }
             }
             elseif ($Username) {
-                foreach ($profile in $allProfiles) {
+                foreach ($profile in $profiles) {
                     try {
                         $fullAccount = (New-Object System.Security.Principal.SecurityIdentifier($profile.SID)).Translate([System.Security.Principal.NTAccount]).Value
-                        if ($fullAccount -match '\\') {
-                            $accountParts = $fullAccount -split '\\'
-                            $profileUsername = $accountParts[1]
-                        }
-                        else {
-                            $profileUsername = $fullAccount
-                        }
-
+                        $profileUsername = if ($fullAccount -match '\\') { ($fullAccount -split '\\')[1] } else { $fullAccount }
+                        
                         if ($profileUsername -eq $Username) {
                             $targetProfile = $profile
                             break
                         }
                     }
-                    catch {
-                        continue
-                    }
+                    catch { continue }
                 }
             }
 
             if (-not $targetProfile) {
-                return [PSCustomObject]@{
-                    ComputerName  = $ComputerName
-                    SID           = $SID
-                    Username      = $Username
-                    HiveMounted   = $false
-                    AlreadyLoaded = $false
-                    Error         = "Profile not found for $(if($SID){"SID: $SID"}else{"Username: $Username"})"
-                    Status        = 'Failed'
-                }
+                $notFoundMsg = if ($SID) { "SID: $SID" } else { "Username: $Username" }
+                throw "Profile not found for $notFoundMsg"
             }
 
-            # Use resolved profile information
             $resolvedSID = $targetProfile.SID
             $resolvedProfilePath = if ($ProfilePath) { $ProfilePath } else { $targetProfile.LocalPath }
 
-            # Get username for output
+            # Resolve username if not provided
             $resolvedUsername = $Username
             if (-not $resolvedUsername) {
                 try {
                     $fullAccount = (New-Object System.Security.Principal.SecurityIdentifier($resolvedSID)).Translate([System.Security.Principal.NTAccount]).Value
-                    if ($fullAccount -match '\\') {
-                        $resolvedUsername = ($fullAccount -split '\\')[1]
-                    }
-                    else {
-                        $resolvedUsername = $fullAccount
-                    }
+                    $resolvedUsername = if ($fullAccount -match '\\') { ($fullAccount -split '\\')[1] } else { $fullAccount }
                 }
-                catch {
-                    $resolvedUsername = "Unknown"
-                }
+                catch { $resolvedUsername = "Unknown" }
             }
 
-            # Mount the hive
-            if ($ComputerName -eq $env:COMPUTERNAME) {
-                $ntuserPath = Join-Path $resolvedProfilePath 'NTUSER.DAT'
+            #endregion
 
+            #region --- Mount Hive (Local or Remote) ---
+
+            $scriptBlock = {
+                param($SID, $ProfilePath)
+                
+                $ntuserPath = Join-Path $ProfilePath 'NTUSER.DAT'
+                
                 if (-not (Test-Path $ntuserPath)) {
-                    return [PSCustomObject]@{
-                        ComputerName  = $ComputerName
-                        SID           = $resolvedSID
-                        Username      = $resolvedUsername
-                        ProfilePath   = $resolvedProfilePath
-                        HiveMounted   = $false
-                        AlreadyLoaded = $false
-                        Error         = "NTUSER.DAT not found at $ntuserPath"
-                        Status        = 'Failed'
-                    }
+                    throw "NTUSER.DAT not found at $ntuserPath"
                 }
 
                 $loadedSIDs = Get-ChildItem "Registry::HKEY_USERS" | Select-Object -ExpandProperty PSChildName
-
-                if ($loadedSIDs -contains $resolvedSID) {
-                    return [PSCustomObject]@{
-                        ComputerName  = $ComputerName
-                        SID           = $resolvedSID
-                        Username      = $resolvedUsername
-                        ProfilePath   = $resolvedProfilePath
-                        HiveMounted   = $false
-                        AlreadyLoaded = $true
-                        Status        = 'Success'
-                    }
+                
+                if ($loadedSIDs -contains $SID) {
+                    return @{ AlreadyLoaded = $true; HiveMounted = $false }
                 }
 
-                $result = reg.exe load "HKU\$resolvedSID" "$ntuserPath" 2>&1
+                $regResult = reg.exe load "HKU\$SID" "$ntuserPath" 2>&1
+                
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Registry load failed: $regResult"
+                }
 
-                if ($LASTEXITCODE -eq 0) {
-                    [PSCustomObject]@{
-                        ComputerName  = $ComputerName
-                        SID           = $resolvedSID
-                        Username      = $resolvedUsername
-                        ProfilePath   = $resolvedProfilePath
-                        HiveMounted   = $true
-                        AlreadyLoaded = $false
-                        Status        = 'Success'
-                    }
-                }
-                else {
-                    [PSCustomObject]@{
-                        ComputerName  = $ComputerName
-                        SID           = $resolvedSID
-                        Username      = $resolvedUsername
-                        ProfilePath   = $resolvedProfilePath
-                        HiveMounted   = $false
-                        AlreadyLoaded = $false
-                        Error         = "Failed to mount hive: $result"
-                        Status        = 'Failed'
-                    }
-                }
+                return @{ AlreadyLoaded = $false; HiveMounted = $true }
+            }
+
+            $mountResult = if ($ComputerName -eq $env:COMPUTERNAME) {
+                & $scriptBlock $resolvedSID $resolvedProfilePath
             }
             else {
-                $result = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock {
-                    param($resolvedSID, $resolvedProfilePath)
+                Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $scriptBlock -ArgumentList $resolvedSID, $resolvedProfilePath
+            }
 
-                    $ntuserPath = Join-Path $resolvedProfilePath 'NTUSER.DAT'
+            #endregion
 
-                    if (-not (Test-Path $ntuserPath)) {
-                        return @{
-                            HiveMounted   = $false
-                            AlreadyLoaded = $false
-                            Error         = "NTUSER.DAT not found at $ntuserPath"
-                            Status        = 'Failed'
-                        }
-                    }
-
-                    $loadedSIDs = Get-ChildItem "Registry::HKEY_USERS" | Select-Object -ExpandProperty PSChildName
-
-                    if ($loadedSIDs -contains $resolvedSID) {
-                        return @{
-                            HiveMounted   = $false
-                            AlreadyLoaded = $true
-                            Status        = 'Success'
-                        }
-                    }
-
-                    $regResult = reg.exe load "HKU\$resolvedSID" "$ntuserPath" 2>&1
-
-                    if ($LASTEXITCODE -eq 0) {
-                        return @{
-                            HiveMounted   = $true
-                            AlreadyLoaded = $false
-                            Status        = 'Success'
-                        }
-                    }
-                    else {
-                        return @{
-                            HiveMounted   = $false
-                            AlreadyLoaded = $false
-                            Error         = "Failed to mount hive: $regResult"
-                            Status        = 'Failed'
-                        }
-                    }
-                } -ArgumentList $resolvedSID, $resolvedProfilePath
-
-                [PSCustomObject]@{
-                    ComputerName  = $ComputerName
-                    SID           = $resolvedSID
-                    Username      = $resolvedUsername
-                    ProfilePath   = $resolvedProfilePath
-                    HiveMounted   = $result.HiveMounted
-                    AlreadyLoaded = $result.AlreadyLoaded
-                    Error         = $result.Error
-                    Status        = $result.Status
-                }
+            # Return success
+            [PSCustomObject]@{
+                ComputerName  = $ComputerName
+                SID           = $resolvedSID
+                Username      = $resolvedUsername
+                ProfilePath   = $resolvedProfilePath
+                HiveMounted   = $mountResult.HiveMounted
+                AlreadyLoaded = $mountResult.AlreadyLoaded
+                Status        = 'Success'
             }
         }
         catch {
@@ -206,6 +141,7 @@ function Mount-VBUserHive {
                 ComputerName  = $ComputerName
                 SID           = $SID
                 Username      = $Username
+                ProfilePath   = $ProfilePath
                 HiveMounted   = $false
                 AlreadyLoaded = $false
                 Error         = $_.Exception.Message

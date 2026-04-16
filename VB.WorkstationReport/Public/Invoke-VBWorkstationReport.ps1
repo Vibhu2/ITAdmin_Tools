@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Invoke-VBWorkstationReport
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.5.0
+# VERSION  : 1.5.1
 # CHANGED  : 16-04-2026 -- All parameters made mandatory, defaults removed.
 #                          OutputPath validated upfront -- warns and stops if missing.
 #                          OutputPath validated again before upload.
@@ -78,7 +78,7 @@ function Invoke-VBWorkstationReport {
     - CollectionTime  : Timestamp of the run
 
     .NOTES
-    Version : 1.5.0
+    Version : 1.5.1
     Author  : Vibhu Bhatnagar
     Category: Windows Workstation Administration
 

@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBUserProfile
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.0.0
+# VERSION  : 1.0.1
 # CHANGED  : 16-04-2026 -- Initial release
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Enumerates all non-system user profiles on local or remote computers
@@ -61,7 +61,7 @@ function Get-VBUserProfile {
           - Error          : Error message (only present on failure)
 
     .NOTES
-        Version      : 1.0.0
+        Version      : 1.0.1
         Author       : Vibhu Bhatnagar
         Category     : User Profile Management
         Requirements :

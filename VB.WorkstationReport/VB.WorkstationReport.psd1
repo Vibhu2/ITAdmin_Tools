@@ -1,12 +1,12 @@
 #
 # VB.WorkstationReport.psd1 -- Module manifest
-# Version : 1.5.0
+# Version : 1.5.1
 # Author  : Vibhu Bhatnagar
 #
 
 @{
     # Module identity
-    ModuleVersion     = '1.5.0'
+    ModuleVersion     = '1.5.1'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -66,6 +66,13 @@ v1.1.0 -- Initial modular release
 - Improved: switch-based registry value translation in Get-VBSyncCenterStatus
 - Improved: Generic.List used instead of += array concatenation throughout
 - Improved: Full comment-based help added to all functions
+
+v1.1.0 -- Initial modular release
+- fixed and tested all functions locally and remotely
+- added full comment-based help to all functions
+- added version notes to all functions and module manifest
+- added error handling and status reporting to all functions
+- standardized output objects across all functions (ComputerName, Status, CollectionTime, Error)
 '@
         }
     }

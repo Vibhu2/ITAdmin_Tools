@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBNetworkInterface
 # MODULE   : WorkstationReport
-# VERSION  : 1.3.0
+# VERSION  : 1.3.1
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieves active physical NIC configuration from local or remote computers
@@ -69,7 +69,7 @@ function Get-VBNetworkInterface {
     - Error                : Error message (only present on failure)
 
     .NOTES
-    Version : 1.3.0
+    Version : 1.3.1
     Author  : Vibhu Bhatnagar
     Category: Windows Workstation Administration
 

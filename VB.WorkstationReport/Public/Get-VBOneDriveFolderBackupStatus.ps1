@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBOneDriveFolderBackupStatus
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.0
+# VERSION  : 1.1.1
 # CHANGED  : 16-04-2026 -- Fix hashtable Int64 type coercion; fix Invoke-Command credential
 #                          and ErrorAction; move scriptblock to begin block
 #            16-04-2026 -- Fix OneDrive type detection: folder name check is now primary
@@ -84,7 +84,7 @@ function Get-VBOneDriveFolderBackupStatus {
           - Error         : Error message (only present on failure)
 
     .NOTES
-        Version      : 1.1.0
+        Version      : 1.1.1
         Author       : Vibhu Bhatnagar
         Category     : User Profile Management
         Requirements :

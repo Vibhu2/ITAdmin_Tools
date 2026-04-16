@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBUserPrinterMappings
 # MODULE   : WorkstationReport
-# VERSION  : 1.3.0
+# VERSION  : 1.3.1
 # CHANGED  : 14-04-2026 -- Standards compliance fixes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieves printer mappings for all user profiles on local or remote computers
@@ -71,7 +71,7 @@ function Get-VBUserPrinterMappings {
     - Error             : Error message (only present on failure)
 
     .NOTES
-    Version : 1.3.0
+    Version : 1.3.1
     Author  : Vibhu Bhatnagar
     Category: Windows Workstation Administration
 

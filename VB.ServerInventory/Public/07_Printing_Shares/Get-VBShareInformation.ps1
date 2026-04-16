@@ -1,23 +1,23 @@
 # ============================================================
 # FUNCTION : Get-VBShareInformation
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 1.2.0
+# CHANGED  : 16-04-2026 -- Separated shares by type (System/File/Printer)
 # AUTHOR   : Vibhu Bhatnagar
-# PURPOSE  : Enumerate file shares on local and remote systems
+# PURPOSE  : Enumerate and classify file shares on local and remote systems
 # ENCODING : UTF-8 with BOM
 # ============================================================
 
 <#
 .SYNOPSIS
-    Enumerate file shares on local and remote systems.
+    Enumerate and classify shares on local and remote systems.
 
 .DESCRIPTION
-    Retrieves information about file system shares on Windows systems, excluding system and administrative shares.
-    Supports local and remote queries with alternate credentials.
+    Retrieves all shares and classifies them as System, File, or Printer shares.
+    Includes SMB configuration, caching policy, encryption, and availability details.
 
 .PARAMETER ComputerName
     Target computer(s). Defaults to local machine. Accepts pipeline input.
-    Supports aliases: Name, Server, Host.
+    Aliases: Name, Server, Host
 
 .PARAMETER Credential
     Alternate credentials for remote execution.
@@ -25,19 +25,22 @@
 .EXAMPLE
     Get-VBShareInformation
 
-.EXAMPLE
-    Get-VBShareInformation -ComputerName SERVER01
+    Retrieves all shares from the local computer.
 
 .EXAMPLE
-    'SRV01','SRV02' | Get-VBShareInformation -Credential (Get-Credential)
+    Get-VBShareInformation | Where-Object { $_.ShareType -eq 'File' }
+
+    Get file shares only.
 
 .OUTPUTS
-    [PSCustomObject]: ComputerName, ShareName, Path, Description, ShareState, FolderEnumerationMode, ConcurrentUserLimit, Status, CollectionTime
+    [PSCustomObject]: ComputerName, ShareName, ShareType, Path, Description, AvailabilityType,
+    ShareState, ConcurrentUserLimit, EncryptData, CachingPolicy, FolderEnumerationMode,
+    Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.2
+    Version  : 1.2.0
     Author   : Vibhu Bhatnagar
-    Modified : 10-04-2026
+    Modified : 16-04-2026
     Category : Shares
 #>
 
@@ -47,55 +50,75 @@ function Get-VBShareInformation {
         [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('Name', 'Server', 'Host')]
         [string[]]$ComputerName = $env:COMPUTERNAME,
-
         [PSCredential]$Credential
     )
 
     process {
         foreach ($computer in $ComputerName) {
             try {
-                # Step 1 -- Query shares from local or remote computer
-                if ($computer -eq $env:COMPUTERNAME) {
-                    $shares = Get-SmbShare | Where-Object {
-                        $_.ShareType -eq 'FileSystemDirectory' -and
-                        $_.Name -notmatch '^(ADMIN\$|C\$|D\$|E\$|F\$|G\$|H\$|I\$|IPC\$|NETLOGON|SYSVOL|print\$)'
-                    }
-                } else {
-                    $shares = Invoke-Command -ComputerName $computer -Credential $Credential -ScriptBlock {
-                        Get-SmbShare | Where-Object {
-                            $_.ShareType -eq 'FileSystemDirectory' -and
-                            $_.Name -notmatch '^(ADMIN\$|C\$|D\$|E\$|F\$|G\$|H\$|I\$|IPC\$|NETLOGON|SYSVOL|print\$)'
+                $scriptBlock = {
+                    # Step 1 -- Collect all shares
+                    $collectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    $allShares = Get-SmbShare
+
+                    $shareInfo = @()
+
+                    # Step 2 -- Classify each share
+                    foreach ($share in $allShares) {
+                        # Step 3 -- Determine share type
+                        $shareType = if ($share.Name -match '^(ADMIN\$|C\$|D\$|E\$|F\$|G\$|H\$|I\$|IPC\$|NETLOGON|SYSVOL|print\$)$') {
+                            'System'
+                        } elseif ($share.ShareType -eq 'PrintQueue') {
+                            'Printer'
+                        } else {
+                            'File'
+                        }
+
+                        # Step 4 -- Extract description safely
+                        $description = if ([string]::IsNullOrWhiteSpace($share.Description)) { '(No description)' } else { $share.Description }
+
+                        # Step 5 -- Build share info object
+                        $shareInfo += [PSCustomObject]@{
+                            ComputerName         = $env:COMPUTERNAME
+                            ShareName            = $share.Name
+                            ShareType            = $shareType
+                            Path                 = $share.Path
+                            Description          = $description
+                            AvailabilityType     = $share.AvailabilityType
+                            ShareState           = $share.ShareState
+                            ConcurrentUserLimit  = $share.ConcurrentUserLimit
+                            EncryptData          = $share.EncryptData
+                            CachingPolicy        = $share.CachingPolicy
+                            FolderEnumerationMode = $share.FolderEnumerationMode
+                            Status               = 'Success'
+                            CollectionTime       = $collectionTime
                         }
                     }
+
+                    return $shareInfo
                 }
 
-                # Step 2 -- Emit PSCustomObject for each share
-                if ($shares) {
-                    foreach ($share in $shares) {
-                        [PSCustomObject]@{
-                            ComputerName             = $computer
-                            ShareName                = $share.Name
-                            Path                     = $share.Path
-                            Description              = $share.Description
-                            ShareState               = $share.ShareState
-                            FolderEnumerationMode    = $share.FolderEnumerationMode
-                            ConcurrentUserLimit      = $share.ConcurrentUserLimit
-                            Status                   = 'Success'
-                            CollectionTime           = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
-                        }
-                    }
+                # Step 6 -- Local vs remote execution
+                if ($computer -eq $env:COMPUTERNAME) {
+                    $result = & $scriptBlock
                 } else {
-                    [PSCustomObject]@{
-                        ComputerName   = $computer
-                        ShareName      = 'None'
-                        Status         = 'No shares found'
-                        CollectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    $params = @{
+                        ComputerName = $computer
+                        ScriptBlock  = $scriptBlock
+                        ErrorAction  = 'Stop'
                     }
+                    if ($Credential) { $params.Credential = $Credential }
+                    $result = Invoke-Command @params
                 }
+
+                $result
             }
             catch {
+                # Step 7 -- Error handling
                 [PSCustomObject]@{
                     ComputerName   = $computer
+                    ShareName      = $null
+                    ShareType      = $null
                     Error          = $_.Exception.Message
                     Status         = 'Failed'
                     CollectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')

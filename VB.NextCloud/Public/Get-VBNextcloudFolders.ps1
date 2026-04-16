@@ -1,23 +1,23 @@
 # ============================================================
-# FUNCTION : Get-VBNextcloudFiles
+# FUNCTION : Get-VBNextcloudFolders
 # MODULE   : VB.NextCloud
-# VERSION  : 1.3.1
-# CHANGED  : 15-04-2026 -- Fix PROPFIND method not supported by Invoke-WebRequest on PS 5.1
+# VERSION  : 1.0.0
+# CHANGED  : 15-04-2026 -- Initial release
 # AUTHOR   : Vibhu Bhatnagar
-# PURPOSE  : Lists files and folders in a Nextcloud directory via WebDAV PROPFIND
+# PURPOSE  : Lists subfolders in a Nextcloud directory via WebDAV PROPFIND
 # ENCODING : UTF-8 with BOM
 # ============================================================
 
-function Get-VBNextcloudFiles {
+function Get-VBNextcloudFolders {
     <#
     .SYNOPSIS
-    Lists files and folders in a Nextcloud directory via WebDAV PROPFIND.
+    Lists subfolders in a Nextcloud directory via WebDAV PROPFIND.
 
     .DESCRIPTION
-    Get-VBNextcloudFiles queries a Nextcloud server using the WebDAV PROPFIND method to
-    retrieve metadata for all items in a specified folder. Returns structured objects for
-    each item including name, path, type, size, and last modified date. TLS 1.2 is enforced.
-    The folder itself is excluded from the results so only its direct children are returned.
+    Get-VBNextcloudFolders queries a Nextcloud server using the WebDAV PROPFIND method to
+    retrieve metadata for all subfolders in a specified folder. Only folders are returned --
+    files are excluded. The folder itself is excluded from results so only direct children
+    are returned. TLS 1.2 is enforced.
 
     .PARAMETER BaseUrl
     Base URL of the Nextcloud instance, e.g. 'https://cloud.example.com'.
@@ -32,36 +32,33 @@ function Get-VBNextcloudFiles {
     WebDAV endpoint path appended to BaseUrl. Defaults to 'remote.php/webdav'.
 
     .EXAMPLE
-    Get-VBNextcloudFiles -BaseUrl 'https://cloud.example.com' -Credential (Get-Credential)
+    Get-VBNextcloudFolders -BaseUrl 'https://cloud.example.com' -Credential (Get-Credential)
 
-    Lists all items in the WebDAV root folder.
-
-    .EXAMPLE
-    Get-VBNextcloudFiles -BaseUrl 'https://cloud.example.com' `
-        -Credential $cred -FolderPath 'Vibhu/Reports'
-
-    Lists all items in the Vibhu/Reports folder.
+    Lists all subfolders in the WebDAV root.
 
     .EXAMPLE
-    Get-VBNextcloudFiles -BaseUrl 'https://cloud.example.com' -Credential $cred `
-        -FolderPath 'Vibhu/Reports' | Where-Object { -not $_.IsFolder } |
-        Select-Object Name, Size, LastModified
+    Get-VBNextcloudFolders -BaseUrl 'https://cloud.example.com' `
+        -Credential $cred -FolderPath 'Vibhu'
 
-    Returns only files (not subfolders) from the specified path.
+    Lists all subfolders inside the Vibhu folder.
+
+    .EXAMPLE
+    Get-VBNextcloudFolders -BaseUrl 'https://cloud.example.com' -Credential $cred |
+        Select-Object Name, Path, LastModified
+
+    Lists root subfolders showing name, path and last modified date.
 
     .OUTPUTS
     PSCustomObject
-    Returns an object per item with:
-    - Name         : Display name of the item
+    Returns an object per folder with:
+    - Name         : Display name of the folder
     - Path         : Full WebDAV href path
-    - IsFolder     : Boolean -- $true if the item is a folder
-    - Size         : File size in bytes ($null for folders)
     - LastModified : Last modified date string from the server
     - Status       : 'Success' or 'Failed'
     - Error        : Error message (only present on failure)
 
     .NOTES
-    Version : 1.3.1
+    Version : 1.0.0
     Module  : VB.NextCloud
     Author  : Vibhu Bhatnagar
 
@@ -94,26 +91,21 @@ function Get-VBNextcloudFiles {
             $targetPath = $FolderPath.Trim('/').Replace('\', '/')
             $listUrl    = if ($targetPath) { '{0}/{1}' -f $webDavUrl, $targetPath } else { $webDavUrl }
 
-            Write-Verbose "Listing Nextcloud folder: $listUrl"
+            Write-Verbose "Listing Nextcloud folders: $listUrl"
 
             $propfindBody = @'
 <?xml version="1.0"?>
 <d:propfind xmlns:d="DAV:">
     <d:prop>
         <d:displayname/>
-        <d:getcontentlength/>
         <d:getlastmodified/>
         <d:resourcetype/>
     </d:prop>
 </d:propfind>
 '@
-            $headers = @{
-                'Content-Type' = 'application/xml'
-                'Depth'        = '1'
-            }
 
             # Invoke-WebRequest does not support PROPFIND on PS 5.1 -- use HttpWebRequest directly
-            $httpRequest = [System.Net.HttpWebRequest]::Create($listUrl)
+            $httpRequest             = [System.Net.HttpWebRequest]::Create($listUrl)
             $httpRequest.Method      = 'PROPFIND'
             $httpRequest.ContentType = 'application/xml'
             $httpRequest.Headers.Add('Depth', '1')
@@ -136,10 +128,8 @@ function Get-VBNextcloudFiles {
             $collectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
 
             foreach ($item in $xml.multistatus.response) {
-                # Normalise the href for comparison -- strip trailing slash
+                # Skip the requested folder itself
                 $itemHref = $item.href.TrimEnd('/')
-
-                # Build the expected self-href for the requested folder to skip it
                 $selfHref = if ($targetPath) {
                     ('/{0}/{1}' -f $WebDAVPath.Trim('/'), $targetPath).TrimEnd('/')
                 }
@@ -149,16 +139,16 @@ function Get-VBNextcloudFiles {
 
                 if ($itemHref -eq $selfHref) { continue }
 
+                # Only return folders
                 $isFolder = $null -ne $item.propstat.prop.resourcetype.collection
+                if (-not $isFolder) { continue }
 
-                Write-Debug "Found item: $($item.propstat.prop.displayname) (IsFolder=$isFolder)"
+                Write-Debug "Found folder: $($item.propstat.prop.displayname)"
 
                 [PSCustomObject]@{
                     ComputerName   = $env:COMPUTERNAME
                     Name           = $item.propstat.prop.displayname
                     Path           = $item.href
-                    IsFolder       = $isFolder
-                    Size           = if ($isFolder) { $null } else { [long]$item.propstat.prop.getcontentlength }
                     LastModified   = $item.propstat.prop.getlastmodified
                     CollectionTime = $collectionTime
                     Status         = 'Success'
@@ -171,8 +161,6 @@ function Get-VBNextcloudFiles {
                 ComputerName   = $env:COMPUTERNAME
                 Name           = $null
                 Path           = $FolderPath
-                IsFolder       = $null
-                Size           = $null
                 LastModified   = $null
                 Error          = $_.Exception.Message
                 Status         = 'Failed'

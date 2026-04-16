@@ -1,8 +1,8 @@
 # ============================================================
 # FUNCTION : Set-VBNextcloudFile
 # MODULE   : VB.NextCloud
-# VERSION  : 1.2.0
-# CHANGED  : 14-04-2026 -- Standards compliance fixes
+# VERSION  : 1.2.1
+# CHANGED  : 15-04-2026 -- Fix binary PUT via HttpWebRequest for PS 5.1 compatibility
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Uploads a single file to Nextcloud via WebDAV PUT
 # ENCODING : UTF-8 with BOM
@@ -74,7 +74,7 @@ function Set-VBNextcloudFile {
     - CollectionTime : Timestamp of the operation
 
     .NOTES
-    Version : 1.2.0
+    Version : 1.2.1
     Author  : Vibhu Bhatnagar
 
     Requirements:
@@ -139,8 +139,18 @@ function Set-VBNextcloudFile {
 
             if ($PSCmdlet.ShouldProcess($uploadUrl, 'Upload file')) {
                 Write-Verbose "Uploading '$($fileInfo.Name)' ($($fileInfo.Length) bytes) to '$uploadUrl'"
-                $fileContent = [System.IO.File]::ReadAllBytes($FilePath)
-                $null = Invoke-RestMethod -Method Put -Uri $uploadUrl -Body $fileContent -Credential $Credential
+                # Invoke-RestMethod does not reliably send binary bodies on PS 5.1 -- use HttpWebRequest
+                $fileContent             = [System.IO.File]::ReadAllBytes($FilePath)
+                $httpRequest             = [System.Net.HttpWebRequest]::Create($uploadUrl)
+                $httpRequest.Method      = 'PUT'
+                $httpRequest.ContentType = 'application/octet-stream'
+                $httpRequest.ContentLength = $fileContent.Length
+                $httpRequest.Credentials = $Credential.GetNetworkCredential()
+                $requestStream = $httpRequest.GetRequestStream()
+                $requestStream.Write($fileContent, 0, $fileContent.Length)
+                $requestStream.Close()
+                $webResponse = $httpRequest.GetResponse()
+                $webResponse.Close()
                 Write-Verbose "Upload complete: $targetPath"
             }
 

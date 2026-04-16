@@ -1,8 +1,8 @@
 # ============================================================
 # FUNCTION : Start-VBNextcloudUpload
 # MODULE   : VB.NextCloud
-# VERSION  : 1.2.0
-# CHANGED  : 15-04-2026 -- Renamed from Set-VBNextcloudFiles to Start-VBNextcloudUpload
+# VERSION  : 1.2.1
+# CHANGED  : 15-04-2026 -- Fix -WhatIf not propagating to Set-VBNextcloudFile inner calls
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Batch uploads files to Nextcloud via WebDAV (wrapper around Set-VBNextcloudFile)
 # ENCODING : UTF-8 with BOM
@@ -77,7 +77,7 @@ function Start-VBNextcloudUpload {
     - CollectionTime : Timestamp of the operation
 
     .NOTES
-    Version : 1.2.0
+    Version : 1.2.1
     Author  : Vibhu Bhatnagar
 
     Requirements:
@@ -122,7 +122,8 @@ function Start-VBNextcloudUpload {
             if (Test-Path -Path $file -PathType Leaf) {
                 Write-Verbose "Uploading: $file"
                 Set-VBNextcloudFile -FilePath $file -BaseUrl $BaseUrl -Credential $Credential `
-                    -DestinationPath $DestinationPath -WebDAVPath $WebDAVPath -Overwrite:$Overwrite
+                    -DestinationPath $DestinationPath -WebDAVPath $WebDAVPath -Overwrite:$Overwrite `
+                    -WhatIf:$WhatIfPreference
             }
             else {
                 Write-Warning "File not found, skipping: $file"

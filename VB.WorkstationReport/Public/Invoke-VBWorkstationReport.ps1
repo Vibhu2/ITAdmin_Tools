@@ -1,8 +1,10 @@
 # ============================================================
 # FUNCTION : Invoke-VBWorkstationReport
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.3.0
-# CHANGED  : 14-04-2026 -- Standards compliance fixes
+# VERSION  : 1.5.0
+# CHANGED  : 16-04-2026 -- All parameters made mandatory, defaults removed.
+#                          OutputPath validated upfront -- warns and stops if missing.
+#                          OutputPath validated again before upload.
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Orchestrates workstation data collection and uploads reports to Nextcloud
 # ENCODING : UTF-8 with BOM
@@ -14,56 +16,54 @@ function Invoke-VBWorkstationReport {
     Generates a full workstation report and uploads it to Nextcloud.
 
     .DESCRIPTION
-    Invoke-VBWorkstationReport orchestrates the four data collection functions:
-      - Get-VBUserPrinterMappings  -> <COMPUTERNAME>_UPM.csv
-      - Get-VBSyncCenterStatus     -> <COMPUTERNAME>_CNC.csv
-      - Get-VBUserFolderRedirections -> <COMPUTERNAME>_UFR.csv
-      - Get-VBNetworkInterface     -> <COMPUTERNAME>_NI.csv
+    Invoke-VBWorkstationReport orchestrates seven data collection functions:
+      - Get-VBNetworkInterface           -> <COMPUTERNAME>_NI.csv
+      - Get-VBOneDriveFolderBackupStatus -> <COMPUTERNAME>_ODFB.csv
+      - Get-VBSyncCenterStatus           -> <COMPUTERNAME>_CNC.csv
+      - Get-VBUserFolderRedirections     -> <COMPUTERNAME>_UFR.csv
+      - Get-VBUserPrinterMappings        -> <COMPUTERNAME>_UPM.csv
+      - Get-VBUserProfile                -> <COMPUTERNAME>_UP.csv
+      - Get-VBUserShellFolders           -> <COMPUTERNAME>_USF.csv
 
-    Each report is saved as a CSV to the local output path, then all CSVs are uploaded
-    to the configured Nextcloud destination folder using Set-VBNextcloudFile.
-
-    Existing CSVs in the output path are cleared before collection begins. Credentials
-    are always passed as a PSCredential -- plain-text passwords are not accepted.
+    All parameters are mandatory -- no defaults are set. OutputPath must exist before
+    the function runs; if it does not exist the function warns and stops immediately.
+    Before upload, OutputPath is validated again and upload is skipped with a warning
+    if no CSVs are found.
 
     .PARAMETER Credential
-    PSCredential for Nextcloud authentication. Use Get-Credential or build a PSCredential
-    from a SecureString. Required.
+    PSCredential for Nextcloud authentication. Mandatory.
 
     .PARAMETER NextcloudBaseUrl
-    Base URL of the Nextcloud instance. Defaults to 'https://vault.dediserve.com'.
+    Base URL of the Nextcloud instance. Mandatory. Example: 'https://vault.dediserve.com'
 
     .PARAMETER NextcloudDestination
-    Remote folder path where reports will be uploaded. Defaults to 'Vibhu/Reports'.
+    Remote folder path on Nextcloud where reports will be uploaded. Mandatory.
+    Example: 'Realtime-IT/Reports'
 
     .PARAMETER OutputPath
-    Local folder path where CSV reports are written before upload.
-    Defaults to 'C:\Realtime'. The folder is created if it does not exist.
+    Local folder path where CSV reports are written before upload. Mandatory.
+    The folder must already exist -- this function will not create it.
+    Example: 'C:\Realtime\Reports'
 
     .PARAMETER SkipUpload
     When specified, reports are generated and saved locally but not uploaded to Nextcloud.
     Useful for testing or when Nextcloud is unavailable.
 
     .EXAMPLE
-    $cred = Get-Credential
-    Invoke-VBWorkstationReport -Credential $cred
-
-    Runs the full report against the local machine with default paths and uploads to Nextcloud.
-
-    .EXAMPLE
-    $secPw  = ConvertTo-SecureString 'MyAppPassword' -AsPlainText -Force
-    $cred   = New-Object PSCredential('myuser', $secPw)
+    $cred = New-Object PSCredential('username', (ConvertTo-SecureString 'AppPassword' -AsPlainText -Force))
     Invoke-VBWorkstationReport -Credential $cred `
-        -NextcloudBaseUrl 'https://cloud.example.com' `
-        -NextcloudDestination 'IT/Workstations' `
-        -OutputPath 'D:\Reports'
-
-    Generates reports to D:\Reports and uploads to a custom Nextcloud path.
+        -NextcloudBaseUrl 'https://vault.dediserve.com' `
+        -NextcloudDestination 'Realtime-IT/Reports' `
+        -OutputPath 'C:\Realtime\Reports'
 
     .EXAMPLE
-    Invoke-VBWorkstationReport -Credential $cred -SkipUpload -OutputPath 'C:\Temp\Reports'
+    Invoke-VBWorkstationReport -Credential $cred `
+        -NextcloudBaseUrl 'https://vault.dediserve.com' `
+        -NextcloudDestination 'Realtime-IT/Reports' `
+        -OutputPath 'C:\Realtime\Reports' `
+        -SkipUpload
 
-    Generates reports locally without uploading -- useful for offline testing.
+    Generates all seven reports locally without uploading to Nextcloud.
 
     .OUTPUTS
     PSCustomObject
@@ -72,20 +72,22 @@ function Invoke-VBWorkstationReport {
     - OutputPath      : Local folder where CSVs were written
     - ReportsGenerated: Number of CSV files successfully created
     - UploadResults   : Array of upload result objects (empty when -SkipUpload is used)
+    - Errors          : Semicolon-separated error messages (null on full success)
     - Duration        : Total execution time
     - Status          : 'Success', 'PartialFailure', or 'Failed'
     - CollectionTime  : Timestamp of the run
 
     .NOTES
-    Version : 1.3.0
+    Version : 1.5.0
     Author  : Vibhu Bhatnagar
     Category: Windows Workstation Administration
 
     Requirements:
     - PowerShell 5.1 or higher
     - Administrative privileges (for registry hive access)
+    - OutputPath directory must exist before calling this function
     - Network access to Nextcloud (unless -SkipUpload is specified)
-    - WorkstationReport module functions must be loaded
+    - VB.WorkstationReport and VB.NextCloud modules must be installed
 
     Security note:
     Never store credentials in plain text inside scripts. Use Get-Credential interactively,
@@ -97,14 +99,17 @@ function Invoke-VBWorkstationReport {
         [Parameter(Mandatory)]
         [PSCredential]$Credential,
 
+        [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$NextcloudBaseUrl = 'https://vault.dediserve.com',
+        [string]$NextcloudBaseUrl,
 
+        [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$NextcloudDestination = 'Vibhu/Reports',
+        [string]$NextcloudDestination,
 
+        [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$OutputPath = 'C:\Realtime',
+        [string]$OutputPath,
 
         [switch]$SkipUpload
     )
@@ -115,60 +120,27 @@ function Invoke-VBWorkstationReport {
     $csvFiles       = [System.Collections.Generic.List[string]]::new()
     $errors         = [System.Collections.Generic.List[string]]::new()
 
-    try {
-        # Ensure output directory exists
-        if (-not (Test-Path $OutputPath)) {
-            Write-Verbose "Creating output directory: $OutputPath"
-            $null = New-Item -Path $OutputPath -ItemType Directory -Force
+    # -- Pre-flight: OutputPath must exist ------------------------------------------
+    if (-not (Test-Path -Path $OutputPath -PathType Container)) {
+        Write-Warning "Invoke-VBWorkstationReport: OutputPath '$OutputPath' does not exist. Create the folder first and re-run."
+        return [PSCustomObject]@{
+            ComputerName     = $computerName
+            OutputPath       = $OutputPath
+            ReportsGenerated = 0
+            UploadResults    = @()
+            Errors           = "OutputPath '$OutputPath' does not exist."
+            Duration         = '00:00.000'
+            Status           = 'Failed'
+            CollectionTime   = $collectionTime
         }
+    }
 
+    try {
         # Clear previous reports
         Write-Verbose "Clearing existing CSVs from: $OutputPath"
         Remove-Item -Path (Join-Path $OutputPath '*.csv') -Force -ErrorAction SilentlyContinue
 
-        # -- Report 1: User Printer Mappings -----------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_UPM.csv"
-        Write-Verbose "Collecting printer mappings..."
-        try {
-            Get-VBUserPrinterMappings -TableOutput |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
-            $csvFiles.Add($csvPath)
-            Write-Verbose "Saved: $csvPath"
-        }
-        catch {
-            $errors.Add("UPM: $($_.Exception.Message)")
-            Write-Warning "Printer mapping collection failed: $($_.Exception.Message)"
-        }
-
-        # -- Report 2: Sync Center Status ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_CNC.csv"
-        Write-Verbose "Collecting Sync Center status..."
-        try {
-            Get-VBSyncCenterStatus |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
-            $csvFiles.Add($csvPath)
-            Write-Verbose "Saved: $csvPath"
-        }
-        catch {
-            $errors.Add("CNC: $($_.Exception.Message)")
-            Write-Warning "Sync Center collection failed: $($_.Exception.Message)"
-        }
-
-        # -- Report 3: User Folder Redirections ---------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_UFR.csv"
-        Write-Verbose "Collecting folder redirections..."
-        try {
-            Get-VBUserFolderRedirections -TableOutput |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
-            $csvFiles.Add($csvPath)
-            Write-Verbose "Saved: $csvPath"
-        }
-        catch {
-            $errors.Add("UFR: $($_.Exception.Message)")
-            Write-Warning "Folder redirection collection failed: $($_.Exception.Message)"
-        }
-
-        # -- Report 4: Network Interfaces ---------------------------------------------
+        # -- Report 1: Network Interfaces ---------------------------------------------
         $csvPath = Join-Path $OutputPath "${computerName}_NI.csv"
         Write-Verbose "Collecting network interfaces..."
         try {
@@ -182,23 +154,120 @@ function Invoke-VBWorkstationReport {
             Write-Warning "Network interface collection failed: $($_.Exception.Message)"
         }
 
-        # -- Upload --------------------------------------------------------------------
-        $uploadResults = @()
-        if (-not $SkipUpload -and $csvFiles.Count -gt 0) {
-            Write-Verbose "Uploading $($csvFiles.Count) file(s) to $NextcloudBaseUrl/$NextcloudDestination"
-            $uploadResults = $csvFiles |
-                Set-VBNextcloudFile -BaseUrl $NextcloudBaseUrl `
-                    -Credential $Credential -DestinationPath $NextcloudDestination -Overwrite
+        # -- Report 2: OneDrive Folder Backup Status ----------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_ODFB.csv"
+        Write-Verbose "Collecting OneDrive folder backup status..."
+        try {
+            Get-VBOneDriveFolderBackupStatus |
+                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        }
+        catch {
+            $errors.Add("ODFB: $($_.Exception.Message)")
+            Write-Warning "OneDrive folder backup collection failed: $($_.Exception.Message)"
+        }
 
-            $failedUploads = @($uploadResults | Where-Object { $_.Status -eq 'Failed' })
-            if ($failedUploads.Count -gt 0) {
-                $failedUploads | ForEach-Object {
-                    $errors.Add("Upload failed for $($_.SourceFile): $($_.Error)")
-                    Write-Warning "Upload failed: $($_.SourceFile) -- $($_.Error)"
+        # -- Report 3: Sync Center Status ---------------------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_CNC.csv"
+        Write-Verbose "Collecting Sync Center status..."
+        try {
+            Get-VBSyncCenterStatus |
+                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        }
+        catch {
+            $errors.Add("CNC: $($_.Exception.Message)")
+            Write-Warning "Sync Center collection failed: $($_.Exception.Message)"
+        }
+
+        # -- Report 4: User Folder Redirections ---------------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_UFR.csv"
+        Write-Verbose "Collecting folder redirections..."
+        try {
+            Get-VBUserFolderRedirections -TableOutput |
+                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        }
+        catch {
+            $errors.Add("UFR: $($_.Exception.Message)")
+            Write-Warning "Folder redirection collection failed: $($_.Exception.Message)"
+        }
+
+        # -- Report 5: User Printer Mappings ------------------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_UPM.csv"
+        Write-Verbose "Collecting printer mappings..."
+        try {
+            Get-VBUserPrinterMappings -TableOutput |
+                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        }
+        catch {
+            $errors.Add("UPM: $($_.Exception.Message)")
+            Write-Warning "Printer mapping collection failed: $($_.Exception.Message)"
+        }
+
+        # -- Report 6: User Profiles --------------------------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_UP.csv"
+        Write-Verbose "Collecting user profiles..."
+        try {
+            Get-VBUserProfile |
+                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        }
+        catch {
+            $errors.Add("UP: $($_.Exception.Message)")
+            Write-Warning "User profile collection failed: $($_.Exception.Message)"
+        }
+
+        # -- Report 7: User Shell Folders ---------------------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_USF.csv"
+        Write-Verbose "Collecting user shell folders..."
+        try {
+            Get-VBUserShellFolders |
+                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        }
+        catch {
+            $errors.Add("USF: $($_.Exception.Message)")
+            Write-Warning "User shell folder collection failed: $($_.Exception.Message)"
+        }
+
+        # -- Upload -------------------------------------------------------------------
+        $uploadResults = @()
+        if (-not $SkipUpload) {
+            # Validate OutputPath still exists and has CSVs before attempting upload
+            if (-not (Test-Path -Path $OutputPath -PathType Container)) {
+                $msg = "Upload skipped: OutputPath '$OutputPath' no longer exists."
+                $errors.Add($msg)
+                Write-Warning $msg
+            }
+            elseif ($csvFiles.Count -eq 0) {
+                $msg = "Upload skipped: no CSV files were generated in '$OutputPath'."
+                $errors.Add($msg)
+                Write-Warning $msg
+            }
+            else {
+                Write-Verbose "Uploading $($csvFiles.Count) file(s) to $NextcloudBaseUrl/$NextcloudDestination"
+                $uploadResults = $csvFiles |
+                    Set-VBNextcloudFile -BaseUrl $NextcloudBaseUrl `
+                        -Credential $Credential -DestinationPath $NextcloudDestination -Overwrite
+
+                $failedUploads = @($uploadResults | Where-Object { $_.Status -eq 'Failed' })
+                if ($failedUploads.Count -gt 0) {
+                    $failedUploads | ForEach-Object {
+                        $errors.Add("Upload failed for $($_.SourceFile): $($_.Error)")
+                        Write-Warning "Upload failed: $($_.SourceFile) -- $($_.Error)"
+                    }
                 }
             }
         }
-        elseif ($SkipUpload) {
+        else {
             Write-Verbose 'Upload skipped (-SkipUpload specified).'
         }
 

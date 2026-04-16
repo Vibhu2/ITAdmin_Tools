@@ -1,0 +1,54 @@
+
+Install-Module -name VB.WorkstationReport -Force
+#region Report Generation and Upload
+if (-not (Test-Path 'C:\Realtime\Reports')) { New-Item -Path 'C:\Realtime\Reports' -ItemType Directory }
+Remove-Item -Path "C:\Realtime\Reports\*.csv" -Force -ErrorAction SilentlyContinue
+$cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "justvibh", (ConvertTo-SecureString "dgTTP-tJD8p-NZsky-rd7xa-nds53" -AsPlainText -Force)
+
+#Report Generation
+$CommonPath = "C:\Realtime\Reports\"
+#$domainName = Get-ChildItem Env:UserDomain | Select-Object -ExpandProperty value
+
+# Retrieving user profile and mounting them
+$profiles = Get-VBUserProfile
+#$profiles | Format-Table -auto
+$profiles | Mount-VBUserHive
+#$profiles | Get-VBUserShellFolders
+#$profiles = Get-VBUserProfile | Where-Object { $_.SID -like "S-1-5-21*" }
+#$profiles | Mount-VBUserHive | FT -auto
+
+#Exporting results
+
+# 1. User Folder Redirection
+$VBUserFolderRedirections = Get-VBUserShellFolders
+$VBUserFolderRedirections | Export-Csv -Path ("$CommonPath\$($env:COMPUTERNAME)_$($env:USERDOMAIN)_UFR.csv") -NoTypeInformation
+
+# 2. User Printer Mapping's
+$VBSystemUserReport = Get-VBUserPrinterMappings
+$VBSystemUserReport | Export-Csv -Path ("$CommonPath\$($env:COMPUTERNAME)_$($env:USERDOMAIN)_UPM.csv") -NoTypeInformation
+
+# 3. System Sycn Center status report
+$VBSyncCenterStatus = Get-VBSyncCenterStatus
+$VBSyncCenterStatus | Export-Csv -Path ("$CommonPath\$($env:COMPUTERNAME)_$($env:USERDOMAIN)_CSC.csv") -NoTypeInformation
+
+
+# 4. System Network Interface report
+$VBUserFolderRedirections = Get-VBNetworkInterface
+$VBUserFolderRedirections | Export-Csv -Path ("$CommonPath\$($env:COMPUTERNAME)_$($env:USERDOMAIN)_NIC.csv") -NoTypeInformation
+
+#5 Onedrive Status Report
+$OnedriveStatus= Get-VBOneDriveKFMStatus
+$OnedriveStatus | Export-Csv -Path ("$CommonPath\$($env:COMPUTERNAME)_$($env:USERDOMAIN)_ODR.csv") -NoTypeInformation
+
+#6 Group policy Report Workstation
+$FinalGPOReport= Get-VBComputerGPOReport
+$FinalGPOReport | Export-Csv -Path ("$CommonPath\$($env:COMPUTERNAME)_$($env:USERDOMAIN)_GPO.csv") -NoTypeInformation
+
+
+#file upload
+$results = get-childitem -path "$CommonPath" -Filter *.csv | Select-Object -ExpandProperty FullName
+$results | Set-VBNextcloudFile -BaseUrl "https://vault.dediserve.com" -Credential $cred -DestinationPath "Vibhu/Reports"
+Clear-Host
+Start-Sleep -Seconds 250
+Remove-Item "C:\Realtime\Reports\*.csv" -Force -ErrorAction SilentlyContinue
+#endregion

@@ -1,10 +1,10 @@
 @{
     # -- Identity --
-    ModuleVersion     = '1.3.0'
+    ModuleVersion     = '1.4.0'
     GUID              = 'c2e4f1a3-8b7d-4e9f-a1c5-3d6e8f2b0a4c'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
-    Description       = 'VB.NextCloud -- WebDAV utilities for Nextcloud. Provides Set-VBNextcloudFile (single PUT), Start-VBNextcloudUpload (batch orchestrator), and Get-VBNextcloudFiles (PROPFIND directory listing).'
+    Description       = 'VB.NextCloud -- WebDAV utilities for Nextcloud. Provides Set-VBNextcloudFile (single PUT), Start-VBNextcloudUpload (batch orchestrator), Get-VBNextcloudFiles (PROPFIND directory listing), and Get-VBNextcloudFolders (PROPFIND folder-only listing).'
     Copyright         = '(c) 2026 Vibhu. All rights reserved.'
 
     # -- Requirements --
@@ -24,7 +24,8 @@
         PSData = @{
             Tags         = @('Nextcloud', 'WebDAV', 'Upload', 'CloudStorage', 'Sysadmin', 'Realtime', 'VBTools')
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
-            ReleaseNotes = 'v1.3.0 -- 15-04-2026 -- Added Get-VBNextcloudFiles (WebDAV PROPFIND directory listing), moved from VB.WorkstationReport.
+            ReleaseNotes = 'v1.4.0 -- 15-04-2026 -- Added Get-VBNextcloudFolders (PROPFIND folder-only listing). Fixed PROPFIND/MKCOL/PUT via HttpWebRequest for PS 5.1 compatibility.
+v1.3.0 -- 15-04-2026 -- Added Get-VBNextcloudFiles (WebDAV PROPFIND directory listing), moved from VB.WorkstationReport.
 v1.2.0 -- 15-04-2026 -- Initial PSGallery release. Set-VBNextcloudFile (single file WebDAV PUT), Start-VBNextcloudUpload (batch wrapper with auto folder creation), New-VBNextcloudFolder (private helper).'
         }
     }

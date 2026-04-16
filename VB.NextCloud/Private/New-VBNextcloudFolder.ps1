@@ -1,8 +1,8 @@
 # ============================================================
 # FUNCTION : New-VBNextcloudFolder
 # MODULE   : VB.NextCloud
-# VERSION  : 1.2.0
-# CHANGED  : 15-04-2026 -- Updated caller reference to Start-VBNextcloudUpload
+# VERSION  : 1.2.1
+# CHANGED  : 15-04-2026 -- Fix MKCOL method not supported by Invoke-WebRequest on PS 5.1
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Creates a folder on Nextcloud via WebDAV MKCOL (private helper)
 # ENCODING : UTF-8 with BOM
@@ -55,7 +55,7 @@ function New-VBNextcloudFolder {
     - CollectionTime : Timestamp of the operation
 
     .NOTES
-    Version : 1.2.0
+    Version : 1.2.1
     Author  : Vibhu Bhatnagar
 
     Private function -- not exported by the module. Called internally by Start-VBNextcloudUpload.
@@ -114,8 +114,13 @@ function New-VBNextcloudFolder {
 
             if ($PSCmdlet.ShouldProcess($folderUrl, 'Create Nextcloud folder')) {
                 Write-Verbose "Creating folder: $targetPath"
-                $null = Invoke-WebRequest -Uri $folderUrl -Method 'MKCOL' -Credential $Credential `
-                    -UseBasicParsing -ErrorAction Stop
+                # Invoke-WebRequest does not support MKCOL on PS 5.1 -- use HttpWebRequest directly
+                $httpRequest             = [System.Net.HttpWebRequest]::Create($folderUrl)
+                $httpRequest.Method      = 'MKCOL'
+                $httpRequest.Credentials = $Credential.GetNetworkCredential()
+                $httpRequest.ContentLength = 0
+                $webResponse = $httpRequest.GetResponse()
+                $webResponse.Close()
                 Write-Verbose "Folder created: $targetPath"
             }
 

@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBNetworkInformation
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 1.1.0
+# CHANGED  : 16-04-2026 -- Refactored for reliable local/remote collection
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieves network configuration information from local or remote computers
 # ENCODING : UTF-8 with BOM
@@ -12,10 +12,9 @@
     Retrieves network configuration information from local or remote computers.
 
 .DESCRIPTION
-    The Get-VBNetworkInformation function collects detailed network configuration information
-    including IPv4/IPv6 addresses, subnet prefixes, default gateways, DNS servers, DHCP status,
-    MAC addresses, and interface status for all network adapters. It supports both local and
-    remote computer queries with pipeline input and credential authentication.
+    Collects detailed network adapter configuration including IPv4/IPv6 addresses, subnet
+    prefixes, default gateways, DNS servers, DHCP status, MAC addresses, and connection
+    status. Uses reliable WMI/CIM methods for both local and remote execution.
 
 .PARAMETER ComputerName
     Target computer(s). Defaults to local machine. Accepts pipeline input.
@@ -40,15 +39,15 @@
     Uses pipeline input to query multiple servers with alternate credentials.
 
 .OUTPUTS
-    [PSCustomObject]: ComputerName, InterfaceAlias, InterfaceDescription, IPv4Address, IPv6Address,
-    SubnetPrefix, DefaultGateway, DNSServers, DHCPEnabled, MACAddress, InterfaceIndex, Status,
-    CollectionTime
+    [PSCustomObject]: ComputerName, InterfaceAlias, InterfaceDescription, IPv4Address,
+    IPv6Address, SubnetMask, DefaultGateway, DNSServers, DHCPEnabled, MACAddress,
+    InterfaceIndex, ConnectionStatus, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.2
+    Version  : 1.1.0
     Author   : Vibhu Bhatnagar
-    Modified : 10-04-2026
-    Category : System Hardware
+    Modified : 16-04-2026
+    Category : System Network
 #>
 
 function Get-VBNetworkInformation {
@@ -63,71 +62,110 @@ function Get-VBNetworkInformation {
     process {
         foreach ($computer in $ComputerName) {
             try {
-                # Step 1 -- Local vs remote determination
-                $IsLocalComputer = ($computer -eq $env:COMPUTERNAME) -or ($computer -eq 'localhost') -or ($computer -eq '.')
+                $scriptBlock = {
+                    # Step 1 -- Collect all network configuration data
+                    $collectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    $adapters       = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -ErrorAction Stop
+                    $netAdapters    = Get-CimInstance -ClassName Win32_NetworkAdapter -ErrorAction Stop
+                    $ipAddresses    = Get-CimInstance -ClassName Win32_NetworkAdapterSetting -ErrorAction Stop
 
-                # Step 2 -- Retrieve network adapters
-                if ($IsLocalComputer) {
-                    # Local collection
-                    $Adapters = Get-NetIPConfiguration -ErrorAction Stop
-                    $AllNetAdapters = Get-NetAdapter -ErrorAction Stop
-                    $AllDnsServers = Get-DnsClientServerAddress -ErrorAction Stop
-                } else {
-                    # Step 3 -- Remote collection setup
-                    $Adapters = Get-NetIPConfiguration -ComputerName $computer -ErrorAction Stop
-                    $AllNetAdapters = Get-CimInstance -ComputerName $computer -ClassName Win32_NetworkAdapter -ErrorAction Stop
-                    $AllNetAdapterConfigs = Get-CimInstance -ComputerName $computer -ClassName Win32_NetworkAdapterConfiguration -ErrorAction Stop
-                }
+                    $networkInfo    = @()
 
-                # Step 4 -- Process each adapter
-                foreach ($adapter in $Adapters) {
-                    if ($IsLocalComputer) {
-                        # Local adapter processing
-                        $NetAdapter = $AllNetAdapters | Where-Object { $_.InterfaceIndex -eq $adapter.InterfaceIndex }
-                        $DNS = $AllDnsServers | Where-Object { $_.InterfaceIndex -eq $adapter.InterfaceIndex }
+                    # Step 2 -- Process each network adapter
+                    foreach ($adapter in $adapters) {
+                        $netAdapter = $netAdapters | Where-Object { $_.InterfaceIndex -eq $adapter.InterfaceIndex }
 
-                        [PSCustomObject]@{
-                            ComputerName          = $computer
-                            InterfaceAlias        = $adapter.InterfaceAlias
-                            InterfaceDescription = $adapter.InterfaceDescription
-                            IPv4Address           = $adapter.IPv4Address.IPAddress
-                            IPv6Address           = $adapter.IPv6Address.IPAddress
-                            SubnetPrefix          = $adapter.IPv4Address.PrefixLength
-                            DefaultGateway        = $adapter.IPv4DefaultGateway.NextHop
-                            DNSServers            = $DNS.ServerAddresses -join ', '
-                            DHCPEnabled           = $adapter.DhcpEnabled
-                            MACAddress            = $NetAdapter.MacAddress
-                            InterfaceIndex        = $adapter.InterfaceIndex
-                            AdapterStatus         = $NetAdapter.Status
-                            Status                = 'Success'
-                            CollectionTime        = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
-                        }
-                    } else {
-                        # Step 5 -- Remote adapter processing
-                        $NetAdapter = $AllNetAdapters | Where-Object { $_.DeviceID -eq $adapter.InterfaceIndex }
-                        $NetAdapterConfig = $AllNetAdapterConfigs | Where-Object { $_.InterfaceIndex -eq $adapter.InterfaceIndex }
+                        if ($netAdapter) {
+                            # Step 3 -- Extract IPv4 address and subnet
+                            $ipv4Address = $null
+                            $subnetMask  = $null
 
-                        [PSCustomObject]@{
-                            ComputerName          = $computer
-                            InterfaceAlias        = $adapter.InterfaceAlias
-                            InterfaceDescription = $adapter.InterfaceDescription
-                            IPv4Address           = $adapter.IPv4Address.IPAddress
-                            IPv6Address           = $adapter.IPv6Address.IPAddress
-                            SubnetPrefix          = $adapter.IPv4Address.PrefixLength
-                            DefaultGateway        = $adapter.IPv4DefaultGateway.NextHop
-                            DNSServers            = $NetAdapterConfig.DNSServerSearchOrder -join ', '
-                            DHCPEnabled           = $NetAdapterConfig.DHCPEnabled
-                            MACAddress            = $NetAdapterConfig.MACAddress
-                            InterfaceIndex        = $adapter.InterfaceIndex
-                            AdapterStatus         = $NetAdapter.NetConnectionStatus
-                            Status                = 'Success'
-                            CollectionTime        = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                            if ($adapter.IPAddress -and $adapter.IPAddress.Count -gt 0) {
+                                # Find first IPv4 address (exclude IPv6)
+                                $ipv4Array = $adapter.IPAddress | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' }
+                                if ($ipv4Array) {
+                                    $ipv4Address = $ipv4Array[0]
+                                    $subnetMask  = $adapter.IPSubnet[0]
+                                }
+                            }
+
+                            # Step 4 -- Extract IPv6 address
+                            $ipv6Address = $null
+                            if ($adapter.IPAddress -and $adapter.IPAddress.Count -gt 0) {
+                                $ipv6Array = $adapter.IPAddress | Where-Object { $_ -match '^[0-9a-f:]+$' }
+                                if ($ipv6Array) {
+                                    $ipv6Address = $ipv6Array[0]
+                                }
+                            }
+
+                            # Step 5 -- Extract default gateway
+                            $defaultGateway = $null
+                            if ($adapter.DefaultIPGateway -and $adapter.DefaultIPGateway.Count -gt 0) {
+                                $defaultGateway = $adapter.DefaultIPGateway[0]
+                            }
+
+                            # Step 6 -- Extract DNS servers
+                            $dnsServers = $null
+                            if ($adapter.DNSServerSearchOrder -and $adapter.DNSServerSearchOrder.Count -gt 0) {
+                                $dnsServers = $adapter.DNSServerSearchOrder -join ', '
+                            }
+
+                            # Step 7 -- Map connection status
+                            $connectionStatus = switch ($netAdapter.NetConnectionStatus) {
+                                0 { 'Disconnected' }
+                                1 { 'Connecting' }
+                                2 { 'Connected' }
+                                3 { 'Disconnecting' }
+                                4 { 'Hardware Not Present' }
+                                5 { 'Hardware Disabled' }
+                                6 { 'Hardware Malfunction' }
+                                7 { 'Media Disconnected' }
+                                8 { 'Authenticating' }
+                                9 { 'Authentication Succeeded' }
+                                10 { 'Authentication Failed' }
+                                default { 'Unknown' }
+                            }
+
+                            # Step 8 -- Build output object
+                            $networkInfo += [PSCustomObject]@{
+                                ComputerName         = $env:COMPUTERNAME
+                                InterfaceAlias       = $netAdapter.NetConnectionID
+                                InterfaceDescription = $netAdapter.Description
+                                IPv4Address          = $ipv4Address
+                                IPv6Address          = $ipv6Address
+                                SubnetMask           = $subnetMask
+                                DefaultGateway       = $defaultGateway
+                                DNSServers           = $dnsServers
+                                DHCPEnabled          = $adapter.DHCPEnabled
+                                MACAddress           = $adapter.MACAddress
+                                InterfaceIndex       = $adapter.InterfaceIndex
+                                ConnectionStatus     = $connectionStatus
+                                Status               = 'Success'
+                                CollectionTime       = $collectionTime
+                            }
                         }
                     }
+
+                    return $networkInfo
                 }
+
+                # Step 9 -- Local vs remote execution
+                if ($computer -eq $env:COMPUTERNAME) {
+                    $result = & $scriptBlock
+                } else {
+                    $params = @{
+                        ComputerName = $computer
+                        ScriptBlock  = $scriptBlock
+                        ErrorAction  = 'Stop'
+                    }
+                    if ($Credential) { $params.Credential = $Credential }
+                    $result = Invoke-Command @params
+                }
+
+                $result
             }
             catch {
-                # Step 6 -- Error handling
+                # Step 10 -- Error handling
                 [PSCustomObject]@{
                     ComputerName   = $computer
                     Error          = $_.Exception.Message

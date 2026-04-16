@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBSystemInfo
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 1.0.3
+# CHANGED  : 16-04-2026 -- Added native API firmware type detection
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieves comprehensive system information from local or remote computers
 # ENCODING : UTF-8 with BOM
@@ -13,8 +13,9 @@
 
 .DESCRIPTION
     The Get-VBSystemInfo function collects detailed system information including OS details,
-    hardware specifications, network configuration, and domain information. It supports both
-    local and remote computer queries with pipeline input and credential authentication.
+    hardware specifications, network configuration, domain information, and BIOS/firmware type.
+    It supports both local and remote computer queries with pipeline input and credential authentication.
+    Uses native Windows API for accurate BIOS/firmware type detection (UEFI vs Legacy).
 
 .PARAMETER ComputerName
     Target computer(s). Defaults to local machine. Accepts pipeline input.
@@ -47,9 +48,9 @@
     Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.2
+    Version  : 1.0.3
     Author   : Vibhu Bhatnagar
-    Modified : 10-04-2026
+    Modified : 16-04-2026
     Category : System Hardware
 #>
 
@@ -61,6 +62,20 @@ function Get-VBSystemInfo {
         [string[]]$ComputerName = $env:COMPUTERNAME,
         [PSCredential]$Credential
     )
+
+    begin {
+        # Step 0 -- Load firmware type API definition once
+        if (-not ([System.Management.Automation.PSTypeName]'FirmwareType').Type) {
+            Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class FirmwareType {
+    [DllImport("kernel32.dll")]
+    public static extern bool GetFirmwareType(out uint firmwareType);
+}
+"@
+        }
+    }
 
     process {
         foreach ($computer in $ComputerName) {
@@ -78,6 +93,15 @@ function Get-VBSystemInfo {
                     $IPAddress = $NetAdapter.IPAddress
                     $NetConfig = Get-NetIPConfiguration -InterfaceIndex $NetAdapter.InterfaceIndex
                     $DHCPStatus = if ($NetConfig.NetIPv4Interface.Dhcp -eq 'Enabled') { 'DHCP' } else { 'Static' }
+
+                    # Get BIOS type via native API
+                    $fw = 0
+                    [FirmwareType]::GetFirmwareType([ref]$fw) | Out-Null
+                    $BIOSType = switch ($fw) {
+                        1 { "BIOS" }
+                        2 { "UEFI" }
+                        default { "Unknown" }
+                    }
                 } else {
                     # Step 2 -- Remote collection setup
                     $CimParams = @{
@@ -93,7 +117,7 @@ function Get-VBSystemInfo {
                     $Processor = Get-CimInstance -CimSession $Session -ClassName Win32_Processor | Select-Object -First 1
                     $TimeZone = Get-CimInstance -CimSession $Session -ClassName Win32_TimeZone
 
-                    # Step 3 -- Remote script block execution
+                    # Step 3 -- Remote script block execution (includes firmware type detection)
                     $InvokeParams = @{
                         ComputerName = $computer
                         ScriptBlock  = {
@@ -102,10 +126,31 @@ function Get-VBSystemInfo {
                             $IPAddress = $NetAdapter.IPAddress
                             $NetConfig = Get-NetIPConfiguration -InterfaceIndex $NetAdapter.InterfaceIndex
                             $DHCPStatus = if ($NetConfig.NetIPv4Interface.Dhcp -eq 'Enabled') { 'DHCP' } else { 'Static' }
+
+                            # Get firmware type via native API
+                            if (-not ([System.Management.Automation.PSTypeName]'FirmwareType').Type) {
+                                Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class FirmwareType {
+    [DllImport("kernel32.dll")]
+    public static extern bool GetFirmwareType(out uint firmwareType);
+}
+"@
+                            }
+                            $fw = 0
+                            [FirmwareType]::GetFirmwareType([ref]$fw) | Out-Null
+                            $BIOSType = switch ($fw) {
+                                1 { "BIOS" }
+                                2 { "UEFI" }
+                                default { "Unknown" }
+                            }
+
                             return @{
                                 IPAddress  = $IPAddress
                                 DHCPStatus = $DHCPStatus
                                 Registry   = $Registry
+                                BIOSType   = $BIOSType
                             }
                         }
                     }
@@ -114,6 +159,7 @@ function Get-VBSystemInfo {
                     $IPAddress = $RemoteData.IPAddress
                     $DHCPStatus = $RemoteData.DHCPStatus
                     $Registry = $RemoteData.Registry
+                    $BIOSType = $RemoteData.BIOSType
 
                     Remove-CimSession -CimSession $Session
                 }
@@ -137,11 +183,7 @@ function Get-VBSystemInfo {
                     BIOSReleaseDate              = $BIOS.ReleaseDate
                     SystemManufacturer           = $CS.Manufacturer
                     SystemModel                  = $CS.Model
-                    BIOSType                     = switch ($BIOS.BiosCharacteristics) {
-                        { $_ -contains 3 } { 'UEFI' }
-                        { $_ -contains 4 } { 'Legacy' }
-                        default { 'Unknown' }
-                    }
+                    BIOSType                     = $BIOSType
                     Domain                       = $CS.Domain
                     DomainRole                   = switch ($CS.DomainRole) {
                         0 { 'Standalone Workstation' }

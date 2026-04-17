@@ -117,6 +117,7 @@ function Invoke-VBWorkstationReport {
     $startTime      = Get-Date
     $collectionTime = $startTime.ToString('dd-MM-yyyy HH:mm:ss')
     $computerName   = $env:COMPUTERNAME
+    $DomainName     = $env:USERDOMAIN
     $csvFiles       = [System.Collections.Generic.List[string]]::new()
     $errors         = [System.Collections.Generic.List[string]]::new()
 
@@ -141,7 +142,7 @@ function Invoke-VBWorkstationReport {
         Remove-Item -Path (Join-Path $OutputPath '*.csv') -Force -ErrorAction SilentlyContinue
 
         # -- Report 1: Network Interfaces ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_NI.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_NI.csv"
         Write-Verbose "Collecting network interfaces..."
         try {
             Get-VBNetworkInterface |
@@ -155,7 +156,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 2: OneDrive Folder Backup Status ----------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_ODFB.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_ODFB.csv"
         Write-Verbose "Collecting OneDrive folder backup status..."
         try {
             Get-VBOneDriveFolderBackupStatus |
@@ -169,7 +170,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 3: Sync Center Status ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_CNC.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_CNC.csv"
         Write-Verbose "Collecting Sync Center status..."
         try {
             Get-VBSyncCenterStatus |
@@ -183,7 +184,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 4: User Folder Redirections ---------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_UFR.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_UFR.csv"
         Write-Verbose "Collecting folder redirections..."
         try {
             Get-VBUserFolderRedirections -TableOutput |
@@ -197,7 +198,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 5: User Printer Mappings ------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_UPM.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_UPM.csv"
         Write-Verbose "Collecting printer mappings..."
         try {
             Get-VBUserPrinterMappings -TableOutput |
@@ -211,7 +212,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 6: User Profiles --------------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_UP.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_UP.csv"
         Write-Verbose "Collecting user profiles..."
         try {
             Get-VBUserProfile |
@@ -225,7 +226,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 7: User Shell Folders ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_USF.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_USF.csv"
         Write-Verbose "Collecting user shell folders..."
         try {
             Get-VBUserShellFolders |

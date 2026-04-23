@@ -6,7 +6,7 @@
 
 @{
     # Module identity
-    ModuleVersion     = '1.5.1'
+    ModuleVersion     = '1.9.0'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -33,6 +33,12 @@
             Tags         = @('Workstation', 'Reporting', 'Nextcloud', 'Printers', 'FolderRedirection', 'SyncCenter')
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
             ReleaseNotes = @'
+v1.9.0 -- 23-04-2026 -- New: Invoke-VBasCurrentUser -- run a scriptblock as the logged-on user from SYSTEM context. Fully self-contained -- C# type compiled inline, no external module required.
+v1.8.0 -- 23-04-2026 -- New: Add-VBUserPrinter -- adds net-new UNC or IP printer to all or targeted user profiles.
+v1.7.2 -- 23-04-2026 -- Set-VBUserPrinterMigration: added CSV format sample and step-by-step creation example.
+v1.7.1 -- 23-04-2026 -- Finalized: full help blocks and examples on all printer migration functions.
+v1.7.0 -- 23-04-2026 -- New: Set-VBUserPrinterMigration (public), Update-VBUserPrinterRegistry (private) -- printer mapping migration UNC <-> IP.
+v1.6.0 -- 23-04-2026 -- New: Dismount-VBUserHive -- safe hive unload, pipeline-compatible with Mount-VBUserHive.
 v1.5.0 -- 16-04-2026 -- Invoke-VBWorkstationReport: all parameters mandatory, defaults removed.
                          OutputPath validated upfront -- warns and stops if path does not exist.
                          OutputPath and CSV count validated before upload attempt.

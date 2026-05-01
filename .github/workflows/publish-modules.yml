@@ -1,21 +1,24 @@
-# .github/workflows/publish-to-psgallery.yml
+# .github/workflows/publish-modules.yml
 #
-# Publishes VBServerInventory (and any future modules) to PowerShell Gallery.
+# Publishes all VB modules to PowerShell Gallery.
 # Triggers on every push to main ONLY if files inside a module directory changed.
 #
 # REPO LAYOUT ASSUMED:
 #   ITAdmin_Tools/
-#   ├── VBServerInventory/
-#   │   ├── VBServerInventory.psd1
-#   │   ├── VBServerInventory.psm1
+#   ├── VB.AdminTools/
+#   │   ├── VB.AdminTools.psd1
+#   │   ├── VB.AdminTools.psm1
 #   │   └── ...
-#   └── .github/workflows/publish-to-psgallery.yml
+#   └── .github/workflows/publish-modules.yml
 #
 # TO ADD A NEW MODULE LATER: no changes needed here.
-# Just create a new folder (e.g. VBNetworkTools/) with a .psd1 and .psm1.
+# Just create a new folder (e.g. VB.NetworkTools/) with a .psd1 and .psm1.
 # This workflow auto-detects it.
 #
-# Version: 1.0.0
+# Version: 1.1.0
+# Changed: v1.0.0 -> v1.1.0 -- Fixed multi-commit push detection.
+#          git diff HEAD~1 HEAD only caught the last commit in a push.
+#          Now uses github.event.before..github.sha to diff the full push range.
 
 name: Publish to PowerShell Gallery
 
@@ -32,12 +35,12 @@ jobs:
     steps:
 
       # -----------------------------------------------------------------------
-      # 1. Check out the repo with 2 commits of history so we can diff HEAD~1
+      # 1. Full checkout — needed so github.event.before SHA is available
       # -----------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       # -----------------------------------------------------------------------
       # 2. Bootstrap PowerShellGet v2 and NuGet provider
@@ -65,6 +68,8 @@ jobs:
 
       # -----------------------------------------------------------------------
       # 3. Detect which module directories changed in this push.
+      #    Uses github.event.before..github.sha to capture ALL commits in the
+      #    push — not just the last one (the old HEAD~1 HEAD bug).
       #    A "module directory" = any root-level folder that contains a .psd1
       #    whose name matches the folder name.
       #    Excludes: .github, .git, and any folder without a matching .psd1.
@@ -72,14 +77,22 @@ jobs:
       - name: Detect changed modules
         id: detect
         shell: pwsh
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA:   ${{ github.sha }}
         run: |
-          # Handle edge case: first-ever commit has no parent
-          $hasParent = git rev-parse --verify HEAD~1 2>$null
-          if ($hasParent) {
-              $changedFiles = git diff --name-only HEAD~1 HEAD
-          } else {
-              Write-Host "First commit detected — treating all modules as changed."
+          $beforeSha = $env:BEFORE_SHA
+          $headSha   = $env:HEAD_SHA
+
+          # github.event.before is all zeros on first-ever push to a branch
+          $isFirstPush = (-not $beforeSha) -or ($beforeSha -match '^0+$')
+
+          if ($isFirstPush) {
+              Write-Host "First push to branch detected — treating all files as changed."
               $changedFiles = git ls-files
+          } else {
+              Write-Host "Diffing $beforeSha..$headSha (full push range)"
+              $changedFiles = git diff --name-only $beforeSha $headSha
           }
 
           Write-Host "Changed files in this push:"
@@ -128,8 +141,8 @@ jobs:
           $failedModules  = @()
 
           foreach ($moduleName in $moduleNames) {
-              $modulePath   = $moduleName                      # e.g. "VBServerInventory"
-              $manifestPath = "$modulePath/$moduleName.psd1"  # e.g. "VBServerInventory/VBServerInventory.psd1"
+              $modulePath   = $moduleName                      # e.g. "VB.AdminTools"
+              $manifestPath = "$modulePath/$moduleName.psd1"  # e.g. "VB.AdminTools/VB.AdminTools.psd1"
 
               Write-Host ""
               Write-Host "========================================"

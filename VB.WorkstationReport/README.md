@@ -37,7 +37,7 @@ Install-Module -Name VB.WorkstationReport -Scope CurrentUser
 | `Add-VBUserPrinter` | Adds a new UNC or IP printer to all or targeted user profiles |
 | `Set-VBUserPrinterMigration` | Migrates printer mappings from old to new paths via CSV |
 | `Invoke-VBasCurrentUser` | Runs a scriptblock in the context of the logged-on user from SYSTEM |
-| `Invoke-VBDiskinformation` | collects workstation Disk information usage and health information|
+| `Get-VBDiskInventory` | collects workstation Disk information usage and health information |
 
 ---
 

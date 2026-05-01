@@ -22,8 +22,10 @@
     # -- Metadata --
     PrivateData = @{
         PSData = @{
-            Tags         = @('Windows', 'Server', 'Inventory', 'AD', 'GPO', 'Security', 'Sysadmin', 'Realtime', 'VBTools')
-            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
+            Tags         = @('PowerShell', 'Sysadmin', 'Windows', 'AD', 'MSP', 'Automation', 'VBTools', 'Server', 'Inventory', 'GPO', 'Security')
+            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/tree/main/VB.ServerInventory'
+            LicenseUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/blob/main/LICENSE'
+            HelpInfoUri  = 'https://pwsh.in/posts/'
             ReleaseNotes = 'v1.0.2 -- 15-04-2026 -- Author standardised to Vibhu Bhatnagar across all 34 functions.
 v1.0.1 -- 10-04-2026 -- Initial release. 34 functions covering System, Disk, Network, AD, GPO, Security, Apps, Printing, Services, and Scheduled Tasks.'
         }

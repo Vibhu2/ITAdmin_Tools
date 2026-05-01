@@ -30,8 +30,11 @@
     # Module metadata
     PrivateData = @{
         PSData = @{
-            Tags         = @('Workstation', 'Reporting', 'Nextcloud', 'Printers', 'FolderRedirection', 'SyncCenter')
-            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
+            Tags         = @('PowerShell', 'Sysadmin', 'Windows', 'AD', 'MSP', 'Automation', 'VBTools', 'Workstation', 'Reporting', 'Nextcloud', 'Printers', 'FolderRedirection', 'SyncCenter')
+            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/tree/main/VB.WorkstationReport'
+            LicenseUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/blob/main/LICENSE'
+            HelpInfoUri  = 'https://pwsh.in/posts/printer-mapping-powershell-vb-workstationreport/'
+            LinkedinUri  = 'https://www.linkedin.com/in/vibhu-bhatnagar-02622798/'
             ReleaseNotes = @'
 v1.9.0 -- 23-04-2026 -- New: Invoke-VBasCurrentUser -- run a scriptblock as the logged-on user from SYSTEM context. Fully self-contained -- C# type compiled inline, no external module required.
 v1.8.0 -- 23-04-2026 -- New: Add-VBUserPrinter -- adds net-new UNC or IP printer to all or targeted user profiles.

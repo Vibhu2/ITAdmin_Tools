@@ -22,8 +22,10 @@
     # -- Metadata --
     PrivateData = @{
         PSData = @{
-            Tags         = @('Nextcloud', 'WebDAV', 'Upload', 'CloudStorage', 'Sysadmin', 'Realtime', 'VBTools')
-            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools'
+            Tags         = @('PowerShell', 'Sysadmin', 'Windows', 'MSP', 'Automation', 'VBTools', 'Nextcloud', 'WebDAV', 'Upload', 'CloudStorage')
+            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/tree/main/VB.NextCloud'
+            LicenseUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/blob/main/LICENSE'
+            HelpInfoUri  = 'https://pwsh.in/posts/'
             ReleaseNotes = 'v1.4.0 -- 15-04-2026 -- Added Get-VBNextcloudFolders (PROPFIND folder-only listing). Fixed PROPFIND/MKCOL/PUT via HttpWebRequest for PS 5.1 compatibility.
 v1.3.0 -- 15-04-2026 -- Added Get-VBNextcloudFiles (WebDAV PROPFIND directory listing), moved from VB.WorkstationReport.
 v1.2.0 -- 15-04-2026 -- Initial PSGallery release. Set-VBNextcloudFile (single file WebDAV PUT), Start-VBNextcloudUpload (batch wrapper with auto folder creation), New-VBNextcloudFolder (private helper).'

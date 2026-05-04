@@ -1,13 +1,14 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.0.2
-# CHANGED  : 23-04-2026 -- Added CSV format sample and step-by-step creation example
+# VERSION  : 1.1.0
+# CHANGED  : 04-05-2026 -- -TargetUser replaced with -Username and -SID arrays for multi-user targeting
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.1.0 -- 04-05-2026 -- -TargetUser replaced with -Username[] and -SID[] arrays; warn per missing user
 # v1.0.2 -- 23-04-2026 -- Added CSV format sample and step-by-step creation example
 # v1.0.1 -- 23-04-2026 -- Finalized: expanded help with all migration types and RMM examples
 # v1.0.0 -- 23-04-2026 -- Initial release
@@ -62,9 +63,15 @@ function Set-VBUserPrinterMigration {
         Applies to all IP destinations in the hashtable. For per-printer driver control
         use -MappingCsv with a DriverName column instead.
 
-    .PARAMETER TargetUser
-        Username or SID of a specific user to migrate. When omitted all non-system
-        user profiles on the machine are processed.
+    .PARAMETER Username
+        One or more usernames to target. Only profiles matching these usernames are
+        processed. A warning is emitted for any username not found on the machine.
+        When omitted (and -SID is also omitted) all non-system profiles are processed.
+
+    .PARAMETER SID
+        One or more SIDs to target. Only profiles matching these SIDs are processed.
+        A warning is emitted for any SID not found on the machine.
+        Can be combined with -Username (OR logic -- either match is included).
 
     .PARAMETER BackupMappings
         When specified, saves a snapshot of each user's current printer mappings to
@@ -98,12 +105,12 @@ function Set-VBUserPrinterMigration {
         #
         # To create it from PowerShell:
         $csv = @"
-OldPath,NewPath,DriverName
-\\PrintServer01\HP_Floor2,10.30.1.50,HP LaserJet 400 M401
-\\PrintServer01\Canon_HR,10.30.1.51,Canon Generic Plus PCL6
-10.30.1.60,\\PrintServer02\Ricoh_Reception,
-\\PrintServer01\Zebra_Labels,\\PrintServer02\Zebra_Labels,
-"@
+                OldPath,NewPath,DriverName
+                \\PrintServer01\HP_Floor2,10.30.1.50,HP LaserJet 400 M401
+                \\PrintServer01\Canon_HR,10.30.1.51,Canon Generic Plus PCL6
+                10.30.1.60,\\PrintServer02\Ricoh_Reception,
+                \\PrintServer01\Zebra_Labels,\\PrintServer02\Zebra_Labels,
+                "@
         $csv | Out-File -FilePath 'C:\Temp\PrinterMappings.csv' -Encoding UTF8
 
         # -------------------------------------------------------------------
@@ -127,10 +134,16 @@ OldPath,NewPath,DriverName
         same backup CSV when deployed via RMM.
 
     .EXAMPLE
-        Set-VBUserPrinterMigration -MappingCsv 'C:\Temp\PrinterMappings.csv' -TargetUser 'jdoe'
+        Set-VBUserPrinterMigration -MappingCsv 'C:\Temp\PrinterMappings.csv' -Username 'jdoe','asmith'
 
-        Migrates printers for a single user only. All other profiles on the machine
-        are skipped. Accepts username or SID for -TargetUser.
+        Migrates printers for jdoe and asmith only. All other profiles on the machine
+        are skipped. A warning is emitted for any username not found on this machine.
+
+    .EXAMPLE
+        Set-VBUserPrinterMigration -MappingCsv 'C:\Temp\PrinterMappings.csv' -SID 'S-1-5-21-123456789-1001'
+
+        Targets a specific user by SID. Useful when deploying to a fleet via RMM --
+        the script self-selects on machines where that SID exists.
 
     .EXAMPLE
         # UNC -> UNC server migration via hashtable (no DriverName needed)
@@ -186,7 +199,7 @@ OldPath,NewPath,DriverName
           - Timestamp    : Time of action (dd-MM-yyyy HH:mm:ss)
 
     .NOTES
-        Version  : 1.0.2
+        Version  : 1.1.0
         Author   : Vibhu Bhatnagar
         Category : Printer Management
 
@@ -212,7 +225,9 @@ OldPath,NewPath,DriverName
 
         [string]$DriverName,
 
-        [string]$TargetUser,
+        [string[]]$Username,
+
+        [string[]]$SID,
 
         [switch]$BackupMappings,
 
@@ -250,27 +265,27 @@ OldPath,NewPath,DriverName
                 }
 
                 $normalizedMappings.Add([PSCustomObject]@{
-                    OldPath    = $row.OldPath.Trim()
-                    NewPath    = $row.NewPath.Trim()
-                    DriverName = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
-                })
+                        OldPath    = $row.OldPath.Trim()
+                        NewPath    = $row.NewPath.Trim()
+                        DriverName = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
+                    })
             }
         }
         elseif ($PrinterMappings) {
             foreach ($key in $PrinterMappings.Keys) {
-                $oldPath  = $key.Trim()
-                $newPath  = $PrinterMappings[$key].Trim()
-                $isNewIP  = $newPath -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+                $oldPath = $key.Trim()
+                $newPath = $PrinterMappings[$key].Trim()
+                $isNewIP = $newPath -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
 
                 if ($isNewIP -and -not $DriverName) {
                     throw "Use -DriverName when supplying IP destinations via -PrinterMappings, or use -MappingCsv for per-printer driver control. Missing driver for: $oldPath -> $newPath"
                 }
 
                 $normalizedMappings.Add([PSCustomObject]@{
-                    OldPath    = $oldPath
-                    NewPath    = $newPath
-                    DriverName = if ($isNewIP) { $DriverName } else { '' }
-                })
+                        OldPath    = $oldPath
+                        NewPath    = $newPath
+                        DriverName = if ($isNewIP) { $DriverName } else { '' }
+                    })
             }
         }
         else {
@@ -287,7 +302,7 @@ OldPath,NewPath,DriverName
             try {
                 # --- Step 2: Machine-level TCP/IP port and printer setup (local only) ---
                 $ipMappings = $normalizedMappings |
-                    Where-Object { $_.NewPath -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' }
+                Where-Object { $_.NewPath -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' }
 
                 if ($ipMappings) {
                     if ($computer -ne $env:COMPUTERNAME) {
@@ -333,13 +348,26 @@ OldPath,NewPath,DriverName
 
                 $profiles = Get-VBUserProfile @profileParams
 
-                if ($TargetUser) {
+                if ($Username -or $SID) {
                     $profiles = @($profiles | Where-Object {
-                        $_.Username -eq $TargetUser -or $_.SID -eq $TargetUser
+                        ($Username -and $_.Username -in $Username) -or
+                        ($SID     -and $_.SID      -in $SID)
                     })
 
+                    # Warn for each requested user not found on this machine
+                    foreach ($name in $Username) {
+                        if ($name -notin ($profiles | Select-Object -ExpandProperty Username)) {
+                            Write-Warning "Username '$name' not found on $computer -- skipped."
+                        }
+                    }
+                    foreach ($sid in $SID) {
+                        if ($sid -notin ($profiles | Select-Object -ExpandProperty SID)) {
+                            Write-Warning "SID '$sid' not found on $computer -- skipped."
+                        }
+                    }
+
                     if ($profiles.Count -eq 0) {
-                        Write-Warning "No profile found for TargetUser '$TargetUser' on $computer"
+                        Write-Warning "No matching profiles found on $computer -- skipping machine."
                         continue
                     }
                 }
@@ -385,7 +413,7 @@ OldPath,NewPath,DriverName
                             }
 
                             $backupData = Get-VBUserPrinterMappings @backupParams |
-                                Where-Object { $_.Username -eq $profile.Username }
+                            Where-Object { $_.Username -eq $profile.Username }
 
                             if ($backupData) {
                                 $backupData | Export-Csv -Path $BackupPath -NoTypeInformation -Append -Encoding UTF8

@@ -6,7 +6,7 @@
 
 @{
     # Module identity
-    ModuleVersion     = '1.10.0'
+    ModuleVersion     = '1.10.1'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -36,6 +36,7 @@
             HelpInfoUri  = 'https://pwsh.in/posts/printer-mapping-powershell-vb-workstationreport/'
             LinkedinUri  = 'https://www.linkedin.com/in/vibhu-bhatnagar-02622798/'
             ReleaseNotes = @'
+v1.10.1 -- 04-05-2026 -- Set-VBUserPrinterMigration: Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop.
 v1.10.0 -- 04-05-2026 -- Set-VBUserPrinterMigration: -TargetUser replaced with -Username[] and -SID[] arrays for multi-user targeting.
 v1.9.0 -- 23-04-2026 -- New: Invoke-VBasCurrentUser -- run a scriptblock as the logged-on user from SYSTEM context. Fully self-contained -- C# type compiled inline, no external module required.
 v1.8.0 -- 23-04-2026 -- New: Add-VBUserPrinter -- adds net-new UNC or IP printer to all or targeted user profiles.

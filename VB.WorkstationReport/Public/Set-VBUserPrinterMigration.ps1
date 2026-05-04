@@ -1,13 +1,14 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.0
-# CHANGED  : 04-05-2026 -- -TargetUser replaced with -Username and -SID arrays for multi-user targeting
+# VERSION  : 1.1.1
+# CHANGED  : 04-05-2026 -- Add-Printer "already exists" handled as skip not failure; outer catch no longer swallows per-user loop
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.1.1 -- 04-05-2026 -- Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop
 # v1.1.0 -- 04-05-2026 -- -TargetUser replaced with -Username[] and -SID[] arrays; warn per missing user
 # v1.0.2 -- 23-04-2026 -- Added CSV format sample and step-by-step creation example
 # v1.0.1 -- 23-04-2026 -- Finalized: expanded help with all migration types and RMM examples
@@ -326,12 +327,22 @@ function Set-VBUserPrinterMigration {
                             }
                         }
 
-                        # Add machine-level printer if display name is known and printer does not exist
+                        # Add machine-level printer if display name is known
                         if ($printerDisplayName) {
-                            if (-not (Get-Printer -Name $printerDisplayName -ErrorAction SilentlyContinue)) {
-                                if ($PSCmdlet.ShouldProcess($printerDisplayName, 'Add printer')) {
+                            if ($PSCmdlet.ShouldProcess($printerDisplayName, 'Add printer')) {
+                                try {
                                     Add-Printer -Name $printerDisplayName -PortName $portName -DriverName $ipMap.DriverName -ErrorAction Stop
                                     Write-Verbose "Added printer: $printerDisplayName on port $portName"
+                                }
+                                catch {
+                                    if ($_.Exception.Message -like '*already exists*') {
+                                        # Printer exists in spooler -- port may differ, that is fine.
+                                        # Per-user registry update will re-point it to the new port.
+                                        Write-Verbose "Printer '$printerDisplayName' already exists in spooler -- skipping Add-Printer."
+                                    }
+                                    else {
+                                        throw
+                                    }
                                 }
                             }
                         }

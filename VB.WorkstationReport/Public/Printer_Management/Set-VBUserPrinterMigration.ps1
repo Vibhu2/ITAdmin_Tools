@@ -1,13 +1,14 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.2
-# CHANGED  : 04-05-2026 -- Username filter matches short name, domain\user, and profile folder name
+# VERSION  : 1.1.3
+# CHANGED  : 04-05-2026 -- Existing printer port updated via Set-Printer when on wrong port; fixes UNC showing in properties
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.1.3 -- 04-05-2026 -- Existing printer port updated via Set-Printer when wrong; fixes UNC path still showing in printer properties
 # v1.1.2 -- 04-05-2026 -- Username filter matches short name, DOMAIN\user, and profile folder name (fixes Entra ID / dot-format accounts)
 # v1.1.1 -- 04-05-2026 -- Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop
 # v1.1.0 -- 04-05-2026 -- -TargetUser replaced with -Username[] and -SID[] arrays; warn per missing user
@@ -328,22 +329,26 @@ function Set-VBUserPrinterMigration {
                             }
                         }
 
-                        # Add machine-level printer if display name is known
+                        # Add or update machine-level printer if display name is known
                         if ($printerDisplayName) {
-                            if ($PSCmdlet.ShouldProcess($printerDisplayName, 'Add printer')) {
-                                try {
+                            $existingPrinter = Get-Printer -Name $printerDisplayName -ErrorAction SilentlyContinue
+
+                            if ($existingPrinter) {
+                                # Printer exists -- check if it is already on the correct port
+                                if ($existingPrinter.PortName -ne $portName) {
+                                    if ($PSCmdlet.ShouldProcess($printerDisplayName, "Update port: $($existingPrinter.PortName) -> $portName")) {
+                                        Set-Printer -Name $printerDisplayName -PortName $portName -ErrorAction Stop
+                                        Write-Verbose "Updated printer '$printerDisplayName' port: $($existingPrinter.PortName) -> $portName"
+                                    }
+                                }
+                                else {
+                                    Write-Verbose "Printer '$printerDisplayName' already on correct port ($portName) -- skipping."
+                                }
+                            }
+                            else {
+                                if ($PSCmdlet.ShouldProcess($printerDisplayName, 'Add printer')) {
                                     Add-Printer -Name $printerDisplayName -PortName $portName -DriverName $ipMap.DriverName -ErrorAction Stop
                                     Write-Verbose "Added printer: $printerDisplayName on port $portName"
-                                }
-                                catch {
-                                    if ($_.Exception.Message -like '*already exists*') {
-                                        # Printer exists in spooler -- port may differ, that is fine.
-                                        # Per-user registry update will re-point it to the new port.
-                                        Write-Verbose "Printer '$printerDisplayName' already exists in spooler -- skipping Add-Printer."
-                                    }
-                                    else {
-                                        throw
-                                    }
                                 }
                             }
                         }

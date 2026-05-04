@@ -1,13 +1,14 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.1
-# CHANGED  : 04-05-2026 -- Add-Printer "already exists" handled as skip not failure; outer catch no longer swallows per-user loop
+# VERSION  : 1.1.2
+# CHANGED  : 04-05-2026 -- Username filter matches short name, domain\user, and profile folder name
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.1.2 -- 04-05-2026 -- Username filter matches short name, DOMAIN\user, and profile folder name (fixes Entra ID / dot-format accounts)
 # v1.1.1 -- 04-05-2026 -- Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop
 # v1.1.0 -- 04-05-2026 -- -TargetUser replaced with -Username[] and -SID[] arrays; warn per missing user
 # v1.0.2 -- 23-04-2026 -- Added CSV format sample and step-by-step creation example
@@ -361,13 +362,25 @@ function Set-VBUserPrinterMigration {
 
                 if ($Username -or $SID) {
                     $profiles = @($profiles | Where-Object {
-                        ($Username -and $_.Username -in $Username) -or
-                        ($SID     -and $_.SID      -in $SID)
+                        $p = $_
+                        # Match any of: short name, DOMAIN\user, or profile folder name
+                        # Covers on-prem AD, Entra ID (dot-format), and UPN-style accounts
+                        $usernameMatch = $Username -and ($Username | Where-Object {
+                            $_ -eq $p.Username -or
+                            $_ -eq "$($p.Domain)\$($p.Username)" -or
+                            $_ -eq (Split-Path $p.ProfilePath -Leaf)
+                        })
+                        $usernameMatch -or ($SID -and $p.SID -in $SID)
                     })
 
                     # Warn for each requested user not found on this machine
                     foreach ($name in $Username) {
-                        if ($name -notin ($profiles | Select-Object -ExpandProperty Username)) {
+                        $found = $profiles | Where-Object {
+                            $name -eq $_.Username -or
+                            $name -eq "$($_.Domain)\$($_.Username)" -or
+                            $name -eq (Split-Path $_.ProfilePath -Leaf)
+                        }
+                        if (-not $found) {
                             Write-Warning "Username '$name' not found on $computer -- skipped."
                         }
                     }

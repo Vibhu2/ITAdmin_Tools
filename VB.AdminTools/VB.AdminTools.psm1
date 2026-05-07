@@ -3,7 +3,7 @@
 # Author  : Vibhu Bhatnagar
 #
 
-$functionFiles = Get-ChildItem -Path "$PSScriptRoot\*.ps1" -ErrorAction SilentlyContinue
+$functionFiles = Get-ChildItem -Path $PSScriptRoot -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
 
 foreach ($file in $functionFiles) {
     . $file.FullName

@@ -92,7 +92,11 @@ function Invoke-VBBulkInsert {
         [Parameter(Mandatory = $true)]
         [double]$DurationSeconds,
 
-        [int]$BatchSize = 50000
+        [int]$BatchSize = 50000,
+
+        # Shared progress state written by this function; read by the main thread polling loop.
+        # Keys written: InsertRowsInserted (int64), InsertTotalRows (int64), InsertDone (bool).
+        [System.Collections.Concurrent.ConcurrentDictionary[string,object]]$ProgressState
     )
 
     $conn         = $null
@@ -146,12 +150,14 @@ INSERT INTO DNSLog (
         $cmd.Transaction = $tx
 
         # Total rows for progress percentage
-        $totalRows  = $Buffer.Count
-        $insertFile = Split-Path $SourceFile -Leaf
+        $totalRows = $Buffer.Count
 
-        Write-Progress -Activity "Inserting DNS records: $insertFile" `
-            -Status "Starting... ($($totalRows.ToString('N0')) rows total)" `
-            -PercentComplete 0
+        # Seed shared state so the polling loop transitions to the insert stage immediately
+        if ($null -ne $ProgressState) {
+            $ProgressState['InsertTotalRows']   = [long]$totalRows
+            $ProgressState['InsertRowsInserted'] = [long]0
+            $ProgressState['InsertDone']        = $false
+        }
 
         # Step 5 -- Iterate buffer and bind each object[] row by index
         foreach ($row in $Buffer) {
@@ -171,23 +177,16 @@ INSERT INTO DNSLog (
                 $cmd.Transaction = $tx
                 Write-Verbose "Invoke-VBBulkInsert: Committed batch at $rowsInserted rows"
 
-                # Progress update -- show rows/total and percentage
-                $pct = if ($totalRows -gt 0) {
-                    [math]::Min(99, [math]::Round($rowsInserted / $totalRows * 100))
-                } else { -1 }
-                Write-Progress -Activity "Inserting DNS records: $insertFile" `
-                    -Status "$($rowsInserted.ToString('N0')) of $($totalRows.ToString('N0')) rows committed ($pct%)" `
-                    -PercentComplete $pct
+                # Update shared state every batch -- polling loop renders the bar on the main thread
+                if ($null -ne $ProgressState) {
+                    $ProgressState['InsertRowsInserted'] = [long]$rowsInserted
+                }
             }
         }
 
         # Step 6 -- Final commit for the last partial batch
         $tx.Commit()
         $tx = $null
-
-        Write-Progress -Activity "Inserting DNS records: $insertFile" `
-            -Status "$($rowsInserted.ToString('N0')) rows inserted -- writing ImportLog audit row..." `
-            -PercentComplete 100
 
         # Step 7 -- Write ImportLog audit row
         $serverName = ''
@@ -215,7 +214,12 @@ VALUES
         $logCmd.ExecuteNonQuery() | Out-Null
         $logCmd.Dispose()
 
-        Write-Progress -Activity "Inserting DNS records: $insertFile" -Completed
+        # Signal the polling loop that insert is complete with final row count
+        if ($null -ne $ProgressState) {
+            $ProgressState['InsertRowsInserted'] = [long]$rowsInserted
+            $ProgressState['InsertDone']        = $true
+        }
+
         Write-Verbose "Invoke-VBBulkInsert: Inserted $rowsInserted rows. ImportLog updated."
     }
     catch {

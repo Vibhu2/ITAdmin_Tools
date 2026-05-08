@@ -178,17 +178,44 @@ function Import-VBDNSLog {
     # Step 5 -- Parallel parse and insert (one thread per file)
     # PS7 parallel runspaces do not inherit module functions -- pass the Private folder
     # path via $using: and dot-source the required functions inside each thread.
+    #
+    # Progress strategy: Write-Progress inside ForEach-Object -Parallel is NOT forwarded
+    # to the host console. Instead each thread writes counters into a shared
+    # ConcurrentDictionary, and the main thread polls that dictionary in a tight loop
+    # driving all three progress bars (Read -> Parse -> Insert) itself.
     $excludePrivate = $ExcludePrivateIPs.IsPresent
     $dbPath         = $DatabasePath
     $hashLookup     = $fileStatuses
     $privateDir     = Join-Path $PSScriptRoot '..\Private'
 
-    $filesToProcess | ForEach-Object -Parallel {
+    # One shared state dict per file being processed. Keyed by file name (leaf).
+    # Parallel threads write; the polling loop below reads.
+    $progressStates = [System.Collections.Concurrent.ConcurrentDictionary[string,
+        System.Collections.Concurrent.ConcurrentDictionary[string,object]]]::new()
+    foreach ($f in $filesToProcess) {
+        $state = [System.Collections.Concurrent.ConcurrentDictionary[string,object]]::new()
+        $state['Stage']              = 'Queued'   # Queued | Reading | Parsing | Inserting | Done | Failed
+        $state['FileName']           = (Split-Path $f -Leaf)
+        $state['FileSizeBytes']      = [long](Get-Item $f).Length
+        $state['ParseTotalBytes']    = [long]0
+        $state['ParseBytesRead']     = [long]0
+        $state['ParseLinesRead']     = [long]0
+        $state['ParsePacketCount']   = [long]0
+        $state['ParseDone']          = $false
+        $state['InsertTotalRows']    = [long]0
+        $state['InsertRowsInserted'] = [long]0
+        $state['InsertDone']         = $false
+        $progressStates[(Split-Path $f -Leaf)] = $state
+    }
+
+    # Launch the parallel pipeline as a background job so the main thread is free to poll
+    $parallelJob = $filesToProcess | ForEach-Object -AsJob -ThrottleLimit $ThrottleLimit -Parallel {
         $filePath       = $_
         $dbPath         = $using:dbPath
         $excludePrivate = $using:excludePrivate
         $hashLookup     = $using:hashLookup
         $privateDir     = $using:privateDir
+        $progressStates = $using:progressStates
 
         # Dot-source Private functions into this runspace -- required for PS7 parallel threads
         Get-ChildItem -Path $privateDir -Filter '*.ps1' | ForEach-Object { . $_.FullName }
@@ -198,9 +225,15 @@ function Import-VBDNSLog {
         $stopwatch   = [System.Diagnostics.Stopwatch]::StartNew()
         $recordCount = 0
         $errorCount  = 0
+        $state       = $progressStates[$fileName]
 
         try {
-            $parseParams = @{ FilePath = $filePath }
+            if ($null -ne $state) { $state['Stage'] = 'Parsing' }
+
+            $parseParams = @{
+                FilePath      = $filePath
+                ProgressState = $state
+            }
             if ($excludePrivate) { $parseParams.ExcludePrivateIPs = $true }
 
             $parseResult = Invoke-VBDNSLogParser @parseParams
@@ -209,7 +242,8 @@ function Import-VBDNSLog {
             $recordCount = $buffer.Count
 
             if ($recordCount -gt 0) {
-                $stopwatch.Stop()
+                if ($null -ne $state) { $state['Stage'] = 'Inserting' }
+
                 $duration = $stopwatch.Elapsed.TotalSeconds
 
                 Invoke-VBBulkInsert `
@@ -219,10 +253,12 @@ function Import-VBDNSLog {
                     -RecordCount     $recordCount `
                     -ErrorCount      $errorCount `
                     -FileHash        $fileHash `
-                    -DurationSeconds $duration | Out-Null
+                    -DurationSeconds $duration `
+                    -ProgressState   $state | Out-Null
             }
 
             $stopwatch.Stop()
+            if ($null -ne $state) { $state['Stage'] = 'Done' }
 
             [PSCustomObject]@{
                 FileName    = $fileName
@@ -236,6 +272,7 @@ function Import-VBDNSLog {
         }
         catch {
             $stopwatch.Stop()
+            if ($null -ne $state) { $state['Stage'] = 'Failed' }
             [PSCustomObject]@{
                 FileName    = $fileName
                 FilePath    = $filePath
@@ -246,6 +283,91 @@ function Import-VBDNSLog {
                 Message     = $_.Exception.Message
             }
         }
+    }
 
-    } -ThrottleLimit $ThrottleLimit
+    # Step 6 -- Progress polling loop on the main thread.
+    # Runs until the background job finishes, updating 3-stage progress bars every 200ms.
+    # Bar IDs: 1 = per-file parent, 2 = Parse child, 3 = Insert child.
+    $totalFiles = $filesToProcess.Count
+    $fileIndex  = 0
+
+    while ($parallelJob.State -in 'NotStarted','Running') {
+        $fileIndex = 0
+        foreach ($kvp in $progressStates.GetEnumerator()) {
+            $s         = $kvp.Value
+            $fileName  = $s['FileName']
+            $stage     = $s['Stage']
+            $fileIndex++
+
+            $fileLabel = "[$fileIndex/$totalFiles] $fileName"
+
+            switch ($stage) {
+                'Queued' {
+                    Write-Progress -Id 1 -Activity "Import-VBDNSLog" `
+                        -Status "Queued: $fileLabel" -PercentComplete 0
+                }
+
+                'Parsing' {
+                    $totalBytes   = [long]$s['ParseTotalBytes']
+                    $bytesRead    = [long]$s['ParseBytesRead']
+                    $linesRead    = [long]$s['ParseLinesRead']
+                    $packetCount  = [long]$s['ParsePacketCount']
+                    $pct          = if ($totalBytes -gt 0) { [math]::Min(99, [math]::Round($bytesRead / $totalBytes * 100)) } else { 0 }
+
+                    Write-Progress -Id 1 -Activity "Import-VBDNSLog" `
+                        -Status "Parsing: $fileLabel" -PercentComplete $pct
+
+                    Write-Progress -Id 2 -ParentId 1 -Activity "Parsing log file" `
+                        -Status ("Lines: {0:N0}  |  PACKET rows: {1:N0}  |  {2}%" -f $linesRead, $packetCount, $pct) `
+                        -PercentComplete $pct
+
+                    Write-Progress -Id 3 -ParentId 1 -Activity "Populating database" `
+                        -Status "Waiting for parse to complete..." -PercentComplete 0
+                }
+
+                'Inserting' {
+                    $totalRows    = [long]$s['InsertTotalRows']
+                    $rowsInserted = [long]$s['InsertRowsInserted']
+                    $pct          = if ($totalRows -gt 0) { [math]::Min(99, [math]::Round($rowsInserted / $totalRows * 100)) } else { 0 }
+                    $packetCount  = [long]$s['ParsePacketCount']
+
+                    Write-Progress -Id 1 -Activity "Import-VBDNSLog" `
+                        -Status "Inserting: $fileLabel" -PercentComplete (50 + [math]::Round($pct / 2))
+
+                    Write-Progress -Id 2 -ParentId 1 -Activity "Parsing log file" `
+                        -Status ("Complete  |  {0:N0} PACKET rows parsed" -f $packetCount) `
+                        -PercentComplete 100
+
+                    Write-Progress -Id 3 -ParentId 1 -Activity "Populating database" `
+                        -Status ("{0:N0} of {1:N0} rows inserted  ({2}%)" -f $rowsInserted, $totalRows, $pct) `
+                        -PercentComplete $pct
+                }
+
+                'Done' {
+                    Write-Progress -Id 3 -ParentId 1 -Activity "Populating database" -Completed
+                    Write-Progress -Id 2 -ParentId 1 -Activity "Parsing log file"    -Completed
+                    Write-Progress -Id 1 -Activity "Import-VBDNSLog" `
+                        -Status "Done: $fileLabel" -PercentComplete 100
+                }
+
+                'Failed' {
+                    Write-Progress -Id 3 -ParentId 1 -Activity "Populating database" -Completed
+                    Write-Progress -Id 2 -ParentId 1 -Activity "Parsing log file"    -Completed
+                    Write-Progress -Id 1 -Activity "Import-VBDNSLog" `
+                        -Status "Failed: $fileLabel" -PercentComplete 100
+                }
+            }
+        }
+
+        Start-Sleep -Milliseconds 200
+    }
+
+    # Clear all progress bars
+    Write-Progress -Id 3 -Activity "Populating database" -Completed
+    Write-Progress -Id 2 -Activity "Parsing log file"    -Completed
+    Write-Progress -Id 1 -Activity "Import-VBDNSLog"     -Completed
+
+    # Collect and emit results from the completed job
+    Receive-Job -Job $parallelJob
+    Remove-Job  -Job $parallelJob
 }

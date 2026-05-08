@@ -80,7 +80,12 @@ function Invoke-VBDNSLogParser {
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
 
-        [switch]$ExcludePrivateIPs
+        [switch]$ExcludePrivateIPs,
+
+        # Shared progress state written by this function; read by the main thread polling loop.
+        # Keys written: ParseBytesRead (int64), ParseLinesRead (int64), ParsePacketCount (int64),
+        #               ParseTotalBytes (int64), ParseDone (bool).
+        [System.Collections.Concurrent.ConcurrentDictionary[string,object]]$ProgressState
     )
 
     # ------------------------------------------------------------------
@@ -126,8 +131,16 @@ function Invoke-VBDNSLogParser {
     $packetCount = 0
 
     # File size for percentage progress (StreamReader exposes BaseStream.Position)
-    $fileSize  = (Get-Item $FilePath).Length
-    $fileName  = Split-Path $FilePath -Leaf
+    $fileSize = (Get-Item $FilePath).Length
+
+    # Seed shared progress state so the polling loop can start immediately
+    if ($null -ne $ProgressState) {
+        $ProgressState['ParseTotalBytes']  = [long]$fileSize
+        $ProgressState['ParseBytesRead']   = [long]0
+        $ProgressState['ParseLinesRead']   = [long]0
+        $ProgressState['ParsePacketCount'] = [long]0
+        $ProgressState['ParseDone']        = $false
+    }
 
     Write-Verbose "Invoke-VBDNSLogParser: Starting parse of '$FilePath' ($([math]::Round($fileSize/1MB,1)) MB)"
 
@@ -142,14 +155,13 @@ function Invoke-VBDNSLogParser {
         while (($line = $reader.ReadLine()) -ne $null) {
             $lineCount++
 
-            # Progress every 10,000 lines -- percentage based on bytes read vs file size
-            if ($lineCount % 10000 -eq 0) {
-                $pct = if ($fileSize -gt 0) {
-                    [math]::Min(99, [math]::Round($reader.BaseStream.Position / $fileSize * 100))
-                } else { -1 }
-                Write-Progress -Activity "Parsing DNS Log: $fileName" `
-                    -Status "Lines: $($lineCount.ToString('N0')) | PACKET rows: $($packetCount.ToString('N0')) | $pct%" `
-                    -PercentComplete $pct
+            # Update shared state every 10,000 lines so the polling loop on the main thread
+            # can render accurate progress without any Write-Progress calls from this runspace
+            # (Write-Progress inside ForEach-Object -Parallel is not forwarded to the host).
+            if ($lineCount % 10000 -eq 0 -and $null -ne $ProgressState) {
+                $ProgressState['ParseBytesRead']   = [long]$reader.BaseStream.Position
+                $ProgressState['ParseLinesRead']   = [long]$lineCount
+                $ProgressState['ParsePacketCount'] = [long]$packetCount
             }
 
             # Stage 1 -- Pre-filter: skip ~75% of all lines before the regex engine sees them
@@ -257,7 +269,13 @@ function Invoke-VBDNSLogParser {
     }
     finally {
         if ($null -ne $reader) { $reader.Close() }
-        Write-Progress -Activity "Parsing DNS Log" -Completed
+        # Signal the polling loop that parsing is complete and write final counters
+        if ($null -ne $ProgressState) {
+            $ProgressState['ParseBytesRead']   = [long]$fileSize
+            $ProgressState['ParseLinesRead']   = [long]$lineCount
+            $ProgressState['ParsePacketCount'] = [long]$packetCount
+            $ProgressState['ParseDone']        = $true
+        }
     }
 
     Write-Verbose "Invoke-VBDNSLogParser: Finished. Lines=$lineCount | PACKET=$packetCount | Errors=$errorCount"

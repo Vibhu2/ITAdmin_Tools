@@ -1,18 +1,32 @@
 # VB.WindowsDNSLogAnalysis
 
-> **Parse once. Store in SQLite. Query forever.**
-> A PowerShell module that turns raw Windows DNS debug logs into a structured, SQL-queryable database — with 9 built-in reports, parallel import, and export to CSV, HTML, or Excel.
+> **Parse once. Store in SQLite. Query forever**.A PowerShell module that turns raw Windows DNS debug logs into a structured, SQL-queryable database — with 9 built-in reports, parallel import, and export to CSV, HTML, or Excel.
 
 ---
 
 ## The Problem with DNS Debug Logs
 
-Windows DNS debug logs are plain text — massive, sprawling, and nearly impossible to analyze at scale. A single busy DNS server can produce **450 MB of log data** every few hours. Grepping through that with `Select-String` works once. It doesn't scale, it can't be correlated, and it can't answer questions like:
+Added and restated the full list:
 
-- *Which machines are generating the most DNS traffic right now?*
-- *What percentage of my queries are returning NXDOMAIN?*
-- *Is there unusual overnight activity that might indicate beaconing?*
-- *Which IP is hammering my DNS server with TXT queries?*
+---
+
+## The Problem with DNS Debug Logs
+
+Windows DNS debug logs are plain text — massive, sprawling, and nearly impossible to analyze at scale. A single busy DNS server can produce 500 MB of log data in just a few hours. Grepping through that with `Select-String` works once. It doesn't scale, it can't be correlated, and it definitely can't answer questions like:
+
+- Which machines are generating the most DNS traffic right now?
+- What percentage of queries are returning `NXDOMAIN`?
+- Is there unusual overnight activity that might indicate beaconing?
+- Which IP is hammering the DNS server with `TXT` record queries?
+- What servers on the domain are talking to the DNS server — and should they be?
+- Are there non-workstation devices contacting DNS that you haven't accounted for?
+- Which workstations are still pointed at this DNS server? Before decommission, their DNS settings need to change — or they lose internet the moment it goes offline.
+
+The blind spot gets worse during server migrations and decommissions. The current workflow is: schedule a test shutdown, wait for someone to call with a problem, then react. That's guesswork. If you enable DNS debug logging and actually parse the output, you know exactly what breaks before you pull the plug — which services stop resolving, which clients lose connectivity, which legacy app was quietly hammering a CNAME you forgot existed.
+
+The logs have the answers. The problem is getting them out.
+
+---
 
 **VB.WindowsDNSLogAnalysis** solves this by importing your logs into SQLite once, then letting you query, filter, and export the data in seconds — with full parameterized SQL support and pre-built security-focused reports.
 
@@ -21,7 +35,7 @@ Windows DNS debug logs are plain text — massive, sprawling, and nearly impossi
 ## Features
 
 | Capability | Detail |
-|---|---|
+| --- | --- |
 | **Fast Parsing** | StreamReader + compiled regex — processes 450 MB in 2–5 minutes |
 | **SQLite Backend** | Single portable `.db` file, no server required |
 | **SHA-256 Deduplication** | Re-importing the same file is safely skipped |
@@ -45,6 +59,7 @@ Windows DNS debug logs are plain text — massive, sprawling, and nearly impossi
 ```powershell
 # 1. Install the SQLite dependency
 Install-Module PSSQLite -Scope CurrentUser
+Install-Module VB.WindowsDNSLogAnalysis -Scope CurrentUser
 
 # 2. Clone this repo
 git clone https://github.com/Vibhu2/ITAdmin_Tools.git
@@ -81,7 +96,7 @@ That's it. Your DNS logs are now a queryable database.
 ## Module Functions
 
 | Function | Purpose |
-|---|---|
+| --- | --- |
 | `Initialize-VBDNSLogDatabase` | Create the SQLite schema and indexes. Run once per database. |
 | `Import-VBDNSLog` | Parse DNS debug log files and load records into SQLite |
 | `Get-VBDNSLog` | Filter and retrieve individual records by IP, domain, type, date range |
@@ -165,6 +180,7 @@ Get-VBDNSLogStatistics -DatabasePath $db -ReportType TalkerDetail -Top 10 | Form
 **Output columns:** `IPAddress`, `IPVersion`, `IsPrivate`, `Queries`, `A_Queries`, `AAAA_Queries`, `PTR_Queries`, `MX_Queries`, `SRV_Queries`, `TXT_Queries`, `Other_Queries`, `UDP_Queries`, `TCP_Queries`, `TopDomain`
 
 **What to look for:**
+
 - High `PTR_Queries` → reverse lookups, common from monitoring tools or printers
 - High `SRV_Queries` → domain-joined services doing service discovery
 - High `TXT_Queries` → potential DNS-based data exfiltration
@@ -340,7 +356,7 @@ Alternatively: DNS Manager → Server Properties → Debug Logging → tick **In
 
 ## Module Structure
 
-```
+```shell
 VB.WindowsDNSLogAnalysis/
 ├── VB.WindowsDNSLogAnalysis.psd1        # Module manifest
 ├── VB.WindowsDNSLogAnalysis.psm1        # Module root
@@ -367,7 +383,7 @@ VB.WindowsDNSLogAnalysis/
 ## Version History
 
 | Version | Date | Notes |
-|---|---|---|
+| --- | --- | --- |
 | 1.1.0 | 2026-05-07 | Added `TalkerDetail` report; `-Top` now optional; fixed `ResponseCode` scoping to response packets only; parse and insert progress bars |
 | 1.0.0 | 2026-05-07 | Initial release — streaming parser, SHA-256 dedup, parallel import, 9 reports, CSV/HTML/XLSX export |
 
@@ -375,7 +391,7 @@ VB.WindowsDNSLogAnalysis/
 
 ## Author
 
-**Vibhu Bhatnagar** — Internal IT  
+**Vibhu Bhatnagar** — Internal IT\
 Part of the [ITAdmin_Tools](https://github.com/Vibhu2/ITAdmin_Tools) collection.
 
 ---

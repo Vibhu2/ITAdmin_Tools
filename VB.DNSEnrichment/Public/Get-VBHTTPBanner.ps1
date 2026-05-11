@@ -152,7 +152,7 @@ function Get-VBHTTPBanner {
                 # Extract Server header
                 $serverHeader = $null
                 if ($response.Headers.ContainsKey('Server')) {
-                    $serverHeader = $response.Headers['Server']
+                    $serverHeader = ($response.Headers['Server'] -join ', ')
                 }
 
                 $sw.Stop()

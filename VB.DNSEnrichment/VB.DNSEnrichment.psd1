@@ -7,7 +7,7 @@
 @{
 
     # -- Module identity
-    ModuleVersion     = '0.3.0'
+    ModuleVersion     = '0.4.0'
     GUID              = '4bbf090c-c895-4a7f-babd-fa826a1787c1'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Internal IT'
@@ -41,7 +41,10 @@
         'Get-VBTCPFingerprint',
         'Get-VBHTTPBanner',
         'Get-VBSNMPIdentity',
-        'Get-VBOUIVendor'
+        'Get-VBOUIVendor',
+        'Get-VBRTSPBanner',
+        'Get-VBmDNSRecord',
+        'Get-VBSwitchARP'
     )
 
     # -- Not exporting cmdlets, variables, or aliases
@@ -52,9 +55,15 @@
     # -- Module metadata
     PrivateData = @{
         PSData = @{
-            Tags         = @('DNS', 'Enrichment', 'IP', 'SQLite', 'AD', 'DHCP', 'SNMP', 'Networking')
+            Tags         = @('DNS', 'Enrichment', 'IP', 'SQLite', 'AD', 'DHCP', 'SNMP', 'Networking', 'RTSP', 'mDNS')
             ProjectUri   = 'https://github.com/VibhuBhatnagar/ITAdmin_Tools'
             ReleaseNotes = @"
+v0.4.0 (2026-05-11) -- Round 4: Sensor layers (RTSP, mDNS, Switch ARP) + PS7 parallel active probes
+- Get-VBRTSPBanner (Layer 8): TCP 554 banner grab; high-confidence camera/NVR signal
+- Get-VBmDNSRecord (Layer 9): dns-sd.exe browse+resolve for 5 service types; one-shot session cache
+- Get-VBSwitchARP (Layer 10): SNMP walk of ARP/FDB/ifAlias on managed switches; one-shot session cache
+- Invoke-VBIPEnrichment: PS7 ForEach-Object -Parallel for active probes (steps 5-11) when Context.CanUseParallel; passive layers always sequential; classification + SQLite always sequential
+
 v0.3.0 (2026-05-11) -- Round 3: Active probe layers (TCP, HTTP, SNMP, OUI)
 - Get-VBTCPFingerprint: 24-port async concurrent scan using BeginConnect/WaitOne (~300 ms)
 - Get-VBHTTPBanner: title + Server header, PS 5.1 cert callback workaround, 4-port fallback chain

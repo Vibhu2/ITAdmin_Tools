@@ -1,6 +1,6 @@
 # ============================================================
 # SCRIPT   : Test-VBDNSEnrichmentModule.ps1
-# VERSION  : 1.3.0
+# VERSION  : 1.4.0
 # AUTHOR   : VB
 # PURPOSE  : Production validation of VB.DNSEnrichment v0.4.0
 #            Exercises every public function, layer, export format,
@@ -102,6 +102,8 @@ process {
             $ip
         } elseif ($ip.IPAddress) {
             [string]$ip.IPAddress
+        } elseif ($ip.IP_Address) {
+            [string]$ip.IP_Address
         } elseif ($ip.'IP Address') {
             [string]$ip.'IP Address'
         } elseif ($ip.IP) {
@@ -375,7 +377,7 @@ Write-Host "  [SECTION 4] Resolve-VBDeviceClass" -ForegroundColor DarkCyan
 $classTests = @(
     @{ Label='Camera (RTSP port)';   Params=@{ OpenPorts='554,80' };                                         Expect='Camera'      }
     @{ Label='Printer (JetDirect)';  Params=@{ OpenPorts='9100,80' };                                        Expect='Printer'     }
-    @{ Label='VoIP (SIP port)';      Params=@{ OpenPorts='5060,80' };                                        Expect='VoIP'        }
+    @{ Label='VoIP (SIP port)';      Params=@{ OpenPorts='5060,80' };                                        Expect='IPPhone'     }
     @{ Label='DC (AD OSClass)';      Params=@{ OSClass='DomainController' };                                  Expect='DomainController' }
     @{ Label='Workstation (RDP)';    Params=@{ OpenPorts='3389,135' };                                        Expect='Workstation' }
     @{ Label='Printer (mDNS IPP)';   Params=@{ MDNSServiceType='_ipp._tcp' };                                 Expect='Printer'     }

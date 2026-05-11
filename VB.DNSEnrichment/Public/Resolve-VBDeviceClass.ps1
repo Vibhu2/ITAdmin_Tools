@@ -169,6 +169,7 @@ function Resolve-VBDeviceClass {
             $ports -contains 9100 -or
             $ports -contains 631 -or
             $ports -contains 515 -or
+            $MDNSServiceType -match '_ipp\._tcp|_pdl-datastream\._tcp|_ipps\._tcp' -or
             $combined -match 'jetdirect|kyocera|ricoh|xerox|laserjet|bizhub|taskalfa|workcentre|brother|lexmark|konica|sharp.*mx|develop.*ineo'
         ) {
             $sources.Add('PrinterPortOrVendor')

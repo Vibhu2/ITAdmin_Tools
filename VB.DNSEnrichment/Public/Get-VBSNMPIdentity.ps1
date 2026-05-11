@@ -111,13 +111,17 @@ function Get-VBSNMPIdentity {
                 $sysName     = $snmp.Get('1.3.6.1.2.1.1.5.0')
                 $sysLocation = $snmp.Get('1.3.6.1.2.1.1.6.0')
 
+                $snmpHostname  = if ([string]::IsNullOrWhiteSpace($sysName))     { $null } else { $sysName.Trim() }
+                $snmpDescr     = if ([string]::IsNullOrWhiteSpace($sysDescr))    { $null } else { $sysDescr.Trim() }
+                $snmpLocation  = if ([string]::IsNullOrWhiteSpace($sysLocation)) { $null } else { $sysLocation.Trim() }
+
                 $sw.Stop()
                 return New-VBLayerResult -IPAddress $IPAddress -Layer $LAYER_NUM -LayerName $LAYER_NAME `
                     -Status 'Success' -ExecutionMs $sw.ElapsedMilliseconds `
                     -ExtraFields @{
-                        Hostname      = if ([string]::IsNullOrWhiteSpace($sysName))     { $null } else { $sysName.Trim() }
-                        SNMPDescr     = if ([string]::IsNullOrWhiteSpace($sysDescr))    { $null } else { $sysDescr.Trim() }
-                        Location      = if ([string]::IsNullOrWhiteSpace($sysLocation)) { $null } else { $sysLocation.Trim() }
+                        Hostname      = $snmpHostname
+                        SNMPDescr     = $snmpDescr
+                        Location      = $snmpLocation
                         CommunityUsed = $community
                         SNMPVersion   = 'v1'
                     }

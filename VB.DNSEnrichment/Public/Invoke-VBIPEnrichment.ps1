@@ -234,12 +234,13 @@ function Invoke-VBIPEnrichment {
             Write-Verbose "[$ip] Step 1 AD"
 
             $adResult = Get-VBADComputer -IPAddress $ip -Context $Context
+            $adDetail = if ($adResult.Status -eq 'Success') { "$($adResult.OSClass) | $($adResult.OU)" } else { $adResult.SkipReason + $adResult.ErrorDetail }
             $layerTrace.Add([PSCustomObject]@{
                 Step       = 1
                 Name       = 'AD'
                 Status     = $adResult.Status
                 DurationMs = $adResult.ExecutionMs
-                Detail     = if ($adResult.Status -eq 'Success') { "$($adResult.OSClass) | $($adResult.OU)" } else { $adResult.SkipReason + $adResult.ErrorDetail }
+                Detail     = $adDetail
             })
             if ($adResult.Status -eq 'Success') {
                 $state.Hostname        = $adResult.Hostname
@@ -257,12 +258,13 @@ function Invoke-VBIPEnrichment {
             Write-Verbose "[$ip] Step 2 DHCP"
 
             $dhcpResult = Get-VBDHCPLease -IPAddress $ip -Context $Context
+            $dhcpDetail = if ($dhcpResult.Status -eq 'Success') { "$($dhcpResult.Hostname) MAC:$($dhcpResult.MACAddress)" } else { $dhcpResult.SkipReason + $dhcpResult.ErrorDetail }
             $layerTrace.Add([PSCustomObject]@{
                 Step       = 2
                 Name       = 'DHCP'
                 Status     = $dhcpResult.Status
                 DurationMs = $dhcpResult.ExecutionMs
-                Detail     = if ($dhcpResult.Status -eq 'Success') { "$($dhcpResult.Hostname) MAC:$($dhcpResult.MACAddress)" } else { $dhcpResult.SkipReason + $dhcpResult.ErrorDetail }
+                Detail     = $dhcpDetail
             })
             if ($dhcpResult.Status -eq 'Success') {
                 if (-not [string]::IsNullOrWhiteSpace($dhcpResult.MACAddress)) {
@@ -285,12 +287,13 @@ function Invoke-VBIPEnrichment {
             if (-not $state.IsResolved) {
                 Write-Verbose "[$ip] Step 3 PTR"
                 $ptrResult = Get-VBPTRRecord -IPAddress $ip -Context $Context
+                $ptrDetail = if ($ptrResult.Status -eq 'Success') { "$($ptrResult.Hostname) (fwd:$($ptrResult.ForwardConfirmed))" } else { $ptrResult.SkipReason + $ptrResult.ErrorDetail }
                 $layerTrace.Add([PSCustomObject]@{
                     Step       = 3
                     Name       = 'PTR'
                     Status     = $ptrResult.Status
                     DurationMs = $ptrResult.ExecutionMs
-                    Detail     = if ($ptrResult.Status -eq 'Success') { "$($ptrResult.Hostname) (fwd:$($ptrResult.ForwardConfirmed))" } else { $ptrResult.SkipReason + $ptrResult.ErrorDetail }
+                    Detail     = $ptrDetail
                 })
                 if ($ptrResult.Status -eq 'Success' -and $ptrResult.ForwardConfirmed) {
                     $state.Hostname       = $ptrResult.Hostname
@@ -313,12 +316,13 @@ function Invoke-VBIPEnrichment {
             Write-Verbose "[$ip] Step 4 ARP"
 
             $arpResult = Get-VBARPEntry -IPAddress $ip -Context $Context
+            $arpDetail = if ($arpResult.Status -eq 'Success') { "MAC:$($arpResult.MACAddress) ($($arpResult.ARPType))" } else { $arpResult.SkipReason + $arpResult.ErrorDetail }
             $layerTrace.Add([PSCustomObject]@{
                 Step       = 4
                 Name       = 'ARP'
                 Status     = $arpResult.Status
                 DurationMs = $arpResult.ExecutionMs
-                Detail     = if ($arpResult.Status -eq 'Success') { "MAC:$($arpResult.MACAddress) ($($arpResult.ARPType))" } else { $arpResult.SkipReason + $arpResult.ErrorDetail }
+                Detail     = $arpDetail
             })
             if ($arpResult.Status -eq 'Success' -and [string]::IsNullOrWhiteSpace($state.MACAddress)) {
                 $state.MACAddress    = $arpResult.MACAddress
@@ -350,7 +354,7 @@ function Invoke-VBIPEnrichment {
                     SNMPAvailable     = ($Context -and $Context.SNMPAvailable)
                     mDNSAvailable     = ($Context -and $Context.mDNSAvailable)
                     RTSPProbeEnabled  = ($Context -and $Context.RTSPProbeEnabled)
-                    SwitchTargetCount = if ($Context -and $Context.SwitchTargets) { $Context.SwitchTargets.Count } else { 0 }
+                    SwitchTargetCount = if ($Context -and $Context.SwitchTargets) { [int]$Context.SwitchTargets.Count } else { 0 }
                 }
             }
 
@@ -493,9 +497,10 @@ if ($ouiResult.Status -eq 'Success') { $fields.OUIVendor=$ouiResult.Vendor; $fie
                 if (-not $SkipActiveProbes) {
                     # ---- Step 5: TCP ----
                     $tcpResult = Get-VBTCPFingerprint -IPAddress $ip -Context $Context
+                    $tcpDetail = if ($tcpResult.Status -eq 'Success') { $tcpResult.OpenPorts } else { $tcpResult.SkipReason + $tcpResult.ErrorDetail }
                     $layerTrace.Add([PSCustomObject]@{
                         Step       = 5; Name = 'TCP'; Status = $tcpResult.Status; DurationMs = $tcpResult.ExecutionMs
-                        Detail     = if ($tcpResult.Status -eq 'Success') { $tcpResult.OpenPorts } else { $tcpResult.SkipReason + $tcpResult.ErrorDetail }
+                        Detail     = $tcpDetail
                     })
                     if ($tcpResult.Status -eq 'Success') { $state.OpenPorts=$tcpResult.OpenPorts; $openPortsList=$tcpResult.OpenPortsList }
                     Write-Verbose "[$ip] Step 5 TCP -> $($tcpResult.Status) ports:$($tcpResult.OpenPorts)"
@@ -709,8 +714,9 @@ ON CONFLICT(IPAddress) DO UPDATE SET
     EnrichmentDurationMs  = excluded.EnrichmentDurationMs,
     UpdatedAt             = excluded.UpdatedAt
 '@
-                    $isResolved   = if ($state.IsResolved) { 1 } else { 0 }
-                    $isUnresolved = if ($classResult.DeviceClass -eq 'Unknown') { 1 } else { 0 }
+                    $isResolved      = if ($state.IsResolved) { 1 } else { 0 }
+                    $isUnresolved    = if ($classResult.DeviceClass -eq 'Unknown') { 1 } else { 0 }
+                    $leaseExpiryVal  = if ($state.LeaseExpiry) { $state.LeaseExpiry.ToString('o') } else { $null }
 
                     Invoke-VBSqliteCommand -DatabasePath $dbPath -NonQuery -Query $upsertSql `
                         -SqlParameters @{
@@ -726,7 +732,7 @@ ON CONFLICT(IPAddress) DO UPDATE SET
                             os               = $state.OperatingSystem
                             ou               = $state.OU
                             openPorts        = $state.OpenPorts
-                            leaseExpiry      = if ($state.LeaseExpiry) { $state.LeaseExpiry.ToString('o') } else { $null }
+                            leaseExpiry      = $leaseExpiryVal
                             attempted        = $attempted
                             succeeded        = $succeeded
                             noResult         = $noResult
@@ -880,10 +886,10 @@ function Invoke-VBBuildEnrichmentObject {
         LayerTrace           = $layerTrace
         IsResolved           = [bool]$Row.IsResolved
         IsUnresolved         = [bool]$Row.IsUnresolved
-        EnrichedAt           = if ($Row.EnrichedAt) { [datetime]$Row.EnrichedAt } else { $null }
+        EnrichedAt           = if ($Row.EnrichedAt)  { [datetime]$Row.EnrichedAt }  else { $null }
         EnrichmentDurationMs = [int]$Row.EnrichmentDurationMs
         FirstSeenAt          = if ($Row.FirstSeenAt) { [datetime]$Row.FirstSeenAt } else { $null }
-        UpdatedAt            = if ($Row.UpdatedAt) { [datetime]$Row.UpdatedAt } else { $null }
+        UpdatedAt            = if ($Row.UpdatedAt)   { [datetime]$Row.UpdatedAt }   else { $null }
         ChangeReason         = 'NoChange'
         FromCache            = $FromCache
     }

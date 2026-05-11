@@ -623,7 +623,7 @@ if ($IPAddress.Count -gt 1) {
     }
 } else {
     Write-TestResult '9-Multi' 'Multi-IP run' 'SKIP' 'Only one IP supplied -- pass multiple IPs with -IPAddress to exercise this section'
-    $SKIP++
+    $SKIP++#
 }
 
 # ============================================================

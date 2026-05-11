@@ -1,6 +1,6 @@
 # ============================================================
 # SCRIPT   : Test-VBDNSEnrichmentModule.ps1
-# VERSION  : 1.2.0
+# VERSION  : 1.3.0
 # AUTHOR   : VB
 # PURPOSE  : Production validation of VB.DNSEnrichment v0.4.0
 #            Exercises every public function, layer, export format,
@@ -96,7 +96,23 @@ function Assert-True {
 } # end begin
 
 process {
-    foreach ($ip in $IPAddress) { $_collectedIPs.Add($ip) }
+    foreach ($ip in $IPAddress) {
+        # Accept plain strings or objects with an IP property (e.g. Import-Csv rows)
+        $val = if ($ip -is [string]) {
+            $ip
+        } elseif ($ip.IPAddress) {
+            [string]$ip.IPAddress
+        } elseif ($ip.'IP Address') {
+            [string]$ip.'IP Address'
+        } elseif ($ip.IP) {
+            [string]$ip.IP
+        } else {
+            [string]$ip
+        }
+        if (-not [string]::IsNullOrWhiteSpace($val)) {
+            $_collectedIPs.Add($val.Trim())
+        }
+    }
 }
 
 end {

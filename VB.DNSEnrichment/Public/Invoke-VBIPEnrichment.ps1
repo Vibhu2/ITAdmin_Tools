@@ -84,8 +84,8 @@ function Invoke-VBIPEnrichment {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [string[]]$IPAddress,
-
+        [Alias('IP_Address', 'IP Address', 'IP')]
+        [object[]]$IPAddress,
         [Parameter()]
         [PSCustomObject]$Context,
 
@@ -109,7 +109,8 @@ function Invoke-VBIPEnrichment {
         $ErrorActionPreference = 'Stop'
 
         if (-not $Context) {
-            Write-Warning "[Orchestrator] No context provided -- running without prerequisite gating. Results may be incomplete."
+            Write-Verbose "[Orchestrator] No context provided -- auto-building context."
+            $Context = Get-VBEnrichmentContext -Quiet
         }
 
         $dbPath     = if ($Context) { $Context.DatabasePath } else { Join-Path $env:LOCALAPPDATA 'VB.DNSEnrichment\enrichment.db' }
@@ -365,108 +366,102 @@ function Invoke-VBIPEnrichment {
                 }
             }
 
-            # ForEach-Object -Parallel is PS7 only -- use [scriptblock]::Create so PS5.1 never parses the syntax
-            $parallelBlock = [scriptblock]::Create(@'
-param($inp, $ctx, $modulePath)
-Import-Module $modulePath -ErrorAction Stop
-$ip            = $inp.IPAddress
-$activeTrace   = New-Object System.Collections.Generic.List[PSCustomObject]
-$openPortsList = @()
-$fields        = @{
-    OpenPorts       = $null
-    HTTPTitle       = $null
-    HTTPServer      = $null
-    SNMPDescr       = $null
-    RTSPBanner      = $null
-    MDNSServiceType = $null
-    Location        = $null
-    OUIVendor       = $null
-    VendorDeviceClass = $null
-    MACAddress      = $inp.MACAddress
-    MACNormalised   = $inp.MACNormalised
-    IsResolved      = $inp.IsResolved
-    Hostname        = $null
-    HostnameSource  = $null
-}
-
-# Step 5 TCP
-$tcpResult = Get-VBTCPFingerprint -IPAddress $ip -Context $ctx
-$activeTrace.Add([PSCustomObject]@{ Step=5; Name='TCP'; Status=$tcpResult.Status; DurationMs=$tcpResult.ExecutionMs; Detail=if($tcpResult.Status -eq 'Success'){$tcpResult.OpenPorts}else{$tcpResult.SkipReason+$tcpResult.ErrorDetail} })
-if ($tcpResult.Status -eq 'Success') { $fields.OpenPorts=$tcpResult.OpenPorts; $openPortsList=$tcpResult.OpenPortsList }
-
-# Step 6 HTTP
-$httpGate = @(80,443,8080,8443)
-if (($openPortsList | Where-Object { $httpGate -contains $_ }).Count -gt 0) {
-    $httpResult = Get-VBHTTPBanner -IPAddress $ip -OpenPortsList $openPortsList -Context $ctx
-    $activeTrace.Add([PSCustomObject]@{ Step=6; Name='HTTP'; Status=$httpResult.Status; DurationMs=$httpResult.ExecutionMs; Detail=if($httpResult.Status -eq 'Success'){"$($httpResult.HTTPTitle) [$($httpResult.HTTPServer)]"}else{$httpResult.SkipReason+$httpResult.ErrorDetail} })
-    if ($httpResult.Status -eq 'Success') { $fields.HTTPTitle=$httpResult.HTTPTitle; $fields.HTTPServer=$httpResult.HTTPServer }
-} else {
-    $activeTrace.Add([PSCustomObject]@{ Step=6; Name='HTTP'; Status='Skipped'; DurationMs=0; Detail='No HTTP ports open (80/443/8080/8443)' })
-}
-
-# Step 7 SNMP
-if ($inp.SNMPAvailable) {
-    $snmpResult = Get-VBSNMPIdentity -IPAddress $ip -Context $ctx
-    $activeTrace.Add([PSCustomObject]@{ Step=7; Name='SNMP'; Status=$snmpResult.Status; DurationMs=$snmpResult.ExecutionMs; Detail=if($snmpResult.Status -eq 'Success'){"$($snmpResult.SNMPDescr) loc:$($snmpResult.Location)"}else{$snmpResult.SkipReason+$snmpResult.ErrorDetail} })
-    if ($snmpResult.Status -eq 'Success') {
-        $fields.SNMPDescr=$snmpResult.SNMPDescr; $fields.Location=$snmpResult.Location
-        if (-not $fields.IsResolved -and -not [string]::IsNullOrWhiteSpace($snmpResult.Hostname)) { $fields.Hostname=$snmpResult.Hostname; $fields.HostnameSource='SNMP'; $fields.IsResolved=$true }
-    }
-} else {
-    $activeTrace.Add([PSCustomObject]@{ Step=7; Name='SNMP'; Status='Skipped'; DurationMs=0; Detail='SNMP unavailable' })
-}
-
-# Step 8 RTSP
-if ($openPortsList -contains 554 -and $inp.RTSPProbeEnabled) {
-    $rtspResult = Get-VBRTSPBanner -IPAddress $ip -Context $ctx
-    $activeTrace.Add([PSCustomObject]@{ Step=8; Name='RTSP'; Status=$rtspResult.Status; DurationMs=$rtspResult.ExecutionMs; Detail=if($rtspResult.Status -eq 'Success'){$rtspResult.RTSPBanner.Substring(0,[math]::Min(80,$rtspResult.RTSPBanner.Length))}else{$rtspResult.SkipReason+$rtspResult.ErrorDetail} })
-    if ($rtspResult.Status -eq 'Success') { $fields.RTSPBanner=$rtspResult.RTSPBanner }
-} else {
-    $activeTrace.Add([PSCustomObject]@{ Step=8; Name='RTSP'; Status='Skipped'; DurationMs=0; Detail=if($openPortsList -notcontains 554){'Port 554 closed'}else{'RTSPProbeDisabled'} })
-}
-
-# Step 9 mDNS
-if ($inp.mDNSAvailable) {
-    $mdnsResult = Get-VBmDNSRecord -IPAddress $ip -Context $ctx
-    $activeTrace.Add([PSCustomObject]@{ Step=9; Name='mDNS'; Status=$mdnsResult.Status; DurationMs=$mdnsResult.ExecutionMs; Detail=if($mdnsResult.Status -eq 'Success'){"$($mdnsResult.MDNSServiceType) $($mdnsResult.MDNSServiceName)"}else{$mdnsResult.SkipReason+$mdnsResult.ErrorDetail} })
-    if ($mdnsResult.Status -eq 'Success') {
-        $fields.MDNSServiceType=$mdnsResult.MDNSServiceType
-        if (-not $fields.IsResolved -and -not [string]::IsNullOrWhiteSpace($mdnsResult.MDNSServiceName)) { $fields.Hostname=$mdnsResult.MDNSServiceName; $fields.HostnameSource='mDNS'; $fields.IsResolved=$true }
-    }
-} else {
-    $activeTrace.Add([PSCustomObject]@{ Step=9; Name='mDNS'; Status='Skipped'; DurationMs=0; Detail='dns-sd.exe not on PATH' })
-}
-
-# Step 10 Switch
-if ($inp.SwitchTargetCount -gt 0 -and $inp.SNMPAvailable) {
-    $switchResult = Get-VBSwitchARP -IPAddress $ip -Context $ctx
-    $activeTrace.Add([PSCustomObject]@{ Step=10; Name='Switch'; Status=$switchResult.Status; DurationMs=$switchResult.ExecutionMs; Detail=if($switchResult.Status -eq 'Success'){"SW:$($switchResult.SwitchIP) Port:$($switchResult.SwitchPort) $($switchResult.PortDescription)"}else{$switchResult.SkipReason+$switchResult.ErrorDetail} })
-    if ($switchResult.Status -eq 'Success') {
-        if ([string]::IsNullOrWhiteSpace($fields.MACAddress)) { $fields.MACAddress=$switchResult.MACAddress; $fields.MACNormalised=($switchResult.MACAddress -replace '[:\-\.]','').ToUpperInvariant() }
-        if ([string]::IsNullOrWhiteSpace($fields.Location)) { $fields.Location=$switchResult.PortDescription }
-    }
-} else {
-    $activeTrace.Add([PSCustomObject]@{ Step=10; Name='Switch'; Status='Skipped'; DurationMs=0; Detail=if($inp.SwitchTargetCount -eq 0){'No SwitchTargets configured'}else{'SNMPUnavailable'} })
-}
-
-# Step 11 OUI
-$ouiResult = Get-VBOUIVendor -MACAddress $fields.MACAddress -IPAddress $ip -Context $ctx
-$activeTrace.Add([PSCustomObject]@{ Step=11; Name='OUI'; Status=$ouiResult.Status; DurationMs=$ouiResult.ExecutionMs; Detail=if($ouiResult.Status -eq 'Success'){$ouiResult.Vendor}else{$ouiResult.SkipReason+$ouiResult.ErrorDetail} })
-if ($ouiResult.Status -eq 'Success') { $fields.OUIVendor=$ouiResult.Vendor; $fields.VendorDeviceClass=$ouiResult.VendorDeviceClass }
-
-[PSCustomObject]@{ IPAddress=$ip; Fields=$fields; ActiveTrace=$activeTrace }
-'@)
-
-            $throttle    = $Context.ParallelThrottleLimit
-            $modulePath  = (Get-Module -Name 'VB.DNSEnrichment' | Select-Object -ExpandProperty Path -First 1)
+            $throttle   = $Context.ParallelThrottleLimit
+            $modulePath = (Get-Module -Name 'VB.DNSEnrichment' | Select-Object -ExpandProperty Path -First 1)
 
             $parallelResults = $parallelInputs |
                 ForEach-Object -ThrottleLimit $throttle -Parallel {
-                    $inp        = $_
-                    $ctx        = $using:Context
-                    $sb         = $using:parallelBlock
-                    $modPath    = $using:modulePath
-                    & $sb $inp $ctx $modPath
+                    $inp     = $_
+                    $ctx     = $using:Context
+                    $modPath = $using:modulePath
+                    Import-Module $modPath -ErrorAction Stop
+
+                    $ip            = $inp.IPAddress
+                    $activeTrace   = New-Object System.Collections.Generic.List[PSCustomObject]
+                    $openPortsList = @()
+                    $fields        = @{
+                        OpenPorts         = $null
+                        HTTPTitle         = $null
+                        HTTPServer        = $null
+                        SNMPDescr         = $null
+                        RTSPBanner        = $null
+                        MDNSServiceType   = $null
+                        Location          = $null
+                        OUIVendor         = $null
+                        VendorDeviceClass = $null
+                        MACAddress        = $inp.MACAddress
+                        MACNormalised     = $inp.MACNormalised
+                        IsResolved        = $inp.IsResolved
+                        Hostname          = $null
+                        HostnameSource    = $null
+                    }
+
+                    # Step 5 TCP
+                    $tcpResult = Get-VBTCPFingerprint -IPAddress $ip -Context $ctx
+                    $activeTrace.Add([PSCustomObject]@{ Step=5; Name='TCP'; Status=$tcpResult.Status; DurationMs=$tcpResult.ExecutionMs; Detail=if($tcpResult.Status -eq 'Success'){$tcpResult.OpenPorts}else{$tcpResult.SkipReason+$tcpResult.ErrorDetail} })
+                    if ($tcpResult.Status -eq 'Success') { $fields.OpenPorts=$tcpResult.OpenPorts; $openPortsList=$tcpResult.OpenPortsList }
+
+                    # Step 6 HTTP
+                    $httpGate = @(80,443,8080,8443)
+                    if (($openPortsList | Where-Object { $httpGate -contains $_ }).Count -gt 0) {
+                        $httpResult = Get-VBHTTPBanner -IPAddress $ip -OpenPortsList $openPortsList -Context $ctx
+                        $activeTrace.Add([PSCustomObject]@{ Step=6; Name='HTTP'; Status=$httpResult.Status; DurationMs=$httpResult.ExecutionMs; Detail=if($httpResult.Status -eq 'Success'){"$($httpResult.HTTPTitle) [$($httpResult.HTTPServer)]"}else{$httpResult.SkipReason+$httpResult.ErrorDetail} })
+                        if ($httpResult.Status -eq 'Success') { $fields.HTTPTitle=$httpResult.HTTPTitle; $fields.HTTPServer=$httpResult.HTTPServer }
+                    } else {
+                        $activeTrace.Add([PSCustomObject]@{ Step=6; Name='HTTP'; Status='Skipped'; DurationMs=0; Detail='No HTTP ports open (80/443/8080/8443)' })
+                    }
+
+                    # Step 7 SNMP
+                    if ($inp.SNMPAvailable) {
+                        $snmpResult = Get-VBSNMPIdentity -IPAddress $ip -Context $ctx
+                        $activeTrace.Add([PSCustomObject]@{ Step=7; Name='SNMP'; Status=$snmpResult.Status; DurationMs=$snmpResult.ExecutionMs; Detail=if($snmpResult.Status -eq 'Success'){"$($snmpResult.SNMPDescr) loc:$($snmpResult.Location)"}else{$snmpResult.SkipReason+$snmpResult.ErrorDetail} })
+                        if ($snmpResult.Status -eq 'Success') {
+                            $fields.SNMPDescr=$snmpResult.SNMPDescr; $fields.Location=$snmpResult.Location
+                            if (-not $fields.IsResolved -and -not [string]::IsNullOrWhiteSpace($snmpResult.Hostname)) { $fields.Hostname=$snmpResult.Hostname; $fields.HostnameSource='SNMP'; $fields.IsResolved=$true }
+                        }
+                    } else {
+                        $activeTrace.Add([PSCustomObject]@{ Step=7; Name='SNMP'; Status='Skipped'; DurationMs=0; Detail='SNMP unavailable' })
+                    }
+
+                    # Step 8 RTSP
+                    if ($openPortsList -contains 554 -and $inp.RTSPProbeEnabled) {
+                        $rtspResult = Get-VBRTSPBanner -IPAddress $ip -Context $ctx
+                        $activeTrace.Add([PSCustomObject]@{ Step=8; Name='RTSP'; Status=$rtspResult.Status; DurationMs=$rtspResult.ExecutionMs; Detail=if($rtspResult.Status -eq 'Success'){$rtspResult.RTSPBanner.Substring(0,[math]::Min(80,$rtspResult.RTSPBanner.Length))}else{$rtspResult.SkipReason+$rtspResult.ErrorDetail} })
+                        if ($rtspResult.Status -eq 'Success') { $fields.RTSPBanner=$rtspResult.RTSPBanner }
+                    } else {
+                        $activeTrace.Add([PSCustomObject]@{ Step=8; Name='RTSP'; Status='Skipped'; DurationMs=0; Detail=if($openPortsList -notcontains 554){'Port 554 closed'}else{'RTSPProbeDisabled'} })
+                    }
+
+                    # Step 9 mDNS
+                    if ($inp.mDNSAvailable) {
+                        $mdnsResult = Get-VBmDNSRecord -IPAddress $ip -Context $ctx
+                        $activeTrace.Add([PSCustomObject]@{ Step=9; Name='mDNS'; Status=$mdnsResult.Status; DurationMs=$mdnsResult.ExecutionMs; Detail=if($mdnsResult.Status -eq 'Success'){"$($mdnsResult.MDNSServiceType) $($mdnsResult.MDNSServiceName)"}else{$mdnsResult.SkipReason+$mdnsResult.ErrorDetail} })
+                        if ($mdnsResult.Status -eq 'Success') {
+                            $fields.MDNSServiceType=$mdnsResult.MDNSServiceType
+                            if (-not $fields.IsResolved -and -not [string]::IsNullOrWhiteSpace($mdnsResult.MDNSServiceName)) { $fields.Hostname=$mdnsResult.MDNSServiceName; $fields.HostnameSource='mDNS'; $fields.IsResolved=$true }
+                        }
+                    } else {
+                        $activeTrace.Add([PSCustomObject]@{ Step=9; Name='mDNS'; Status='Skipped'; DurationMs=0; Detail='dns-sd.exe not on PATH' })
+                    }
+
+                    # Step 10 Switch
+                    if ($inp.SwitchTargetCount -gt 0 -and $inp.SNMPAvailable) {
+                        $switchResult = Get-VBSwitchARP -IPAddress $ip -Context $ctx
+                        $activeTrace.Add([PSCustomObject]@{ Step=10; Name='Switch'; Status=$switchResult.Status; DurationMs=$switchResult.ExecutionMs; Detail=if($switchResult.Status -eq 'Success'){"SW:$($switchResult.SwitchIP) Port:$($switchResult.SwitchPort) $($switchResult.PortDescription)"}else{$switchResult.SkipReason+$switchResult.ErrorDetail} })
+                        if ($switchResult.Status -eq 'Success') {
+                            if ([string]::IsNullOrWhiteSpace($fields.MACAddress)) { $fields.MACAddress=$switchResult.MACAddress; $fields.MACNormalised=($switchResult.MACAddress -replace '[:\-\.]','').ToUpperInvariant() }
+                            if ([string]::IsNullOrWhiteSpace($fields.Location)) { $fields.Location=$switchResult.PortDescription }
+                        }
+                    } else {
+                        $activeTrace.Add([PSCustomObject]@{ Step=10; Name='Switch'; Status='Skipped'; DurationMs=0; Detail=if($inp.SwitchTargetCount -eq 0){'No SwitchTargets configured'}else{'SNMPUnavailable'} })
+                    }
+
+                    # Step 11 OUI
+                    $ouiResult = Get-VBOUIVendor -MACAddress $fields.MACAddress -IPAddress $ip -Context $ctx
+                    $activeTrace.Add([PSCustomObject]@{ Step=11; Name='OUI'; Status=$ouiResult.Status; DurationMs=$ouiResult.ExecutionMs; Detail=if($ouiResult.Status -eq 'Success'){$ouiResult.Vendor}else{$ouiResult.SkipReason+$ouiResult.ErrorDetail} })
+                    if ($ouiResult.Status -eq 'Success') { $fields.OUIVendor=$ouiResult.Vendor; $fields.VendorDeviceClass=$ouiResult.VendorDeviceClass }
+
+                    [PSCustomObject]@{ IPAddress=$ip; Fields=$fields; ActiveTrace=$activeTrace }
                 }
 
             # Merge parallel results back into stateMap

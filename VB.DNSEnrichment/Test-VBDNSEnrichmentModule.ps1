@@ -1,6 +1,6 @@
 # ============================================================
 # SCRIPT   : Test-VBDNSEnrichmentModule.ps1
-# VERSION  : 1.1.0
+# VERSION  : 1.2.0
 # AUTHOR   : VB
 # PURPOSE  : Production validation of VB.DNSEnrichment v0.4.0
 #            Exercises every public function, layer, export format,
@@ -15,6 +15,8 @@
 [CmdletBinding()]
 param(
     # --- Required: at least one private IP to probe ---
+    # Pass as array:  .\Test-VBDNSEnrichmentModule.ps1 -IPAddress '10.0.0.1','10.0.0.2'
+    # Or pipeline:    '10.0.0.1','10.0.0.2' | .\Test-VBDNSEnrichmentModule.ps1
     [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
     [string[]]$IPAddress,
 
@@ -43,8 +45,10 @@ param(
     [switch]$ForceRefresh
 )
 
+begin {
 $ErrorActionPreference = 'Stop'
 $ScriptStart           = Get-Date
+$_collectedIPs         = [System.Collections.Generic.List[string]]::new()
 
 # ============================================================
 # HELPER : coloured test result line
@@ -89,6 +93,14 @@ function Assert-True {
         $script:FAIL++
     }
 }
+} # end begin
+
+process {
+    foreach ($ip in $IPAddress) { $_collectedIPs.Add($ip) }
+}
+
+end {
+$IPAddress = $_collectedIPs.ToArray()
 
 # ============================================================
 # SECTION 0 -- Prerequisites
@@ -649,3 +661,4 @@ if ($FAIL -gt 0) {
     Write-Host "  All tests passed. Exports written to: $OutputPath" -ForegroundColor Green
     exit 0
 }
+} # end end

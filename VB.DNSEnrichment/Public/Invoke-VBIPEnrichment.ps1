@@ -310,23 +310,146 @@ function Invoke-VBIPEnrichment {
             }
             Write-Verbose "[$ip] Step 4 ARP -> $($arpResult.Status)"
 
-            # ---- Steps 5-11: Active probes -- Skipped in Round 2 ----
-            $activeSteps = @(
-                @{ Step=5;  Name='TCP'    }
-                @{ Step=6;  Name='HTTP'   }
-                @{ Step=7;  Name='SNMP'   }
-                @{ Step=8;  Name='RTSP'   }
-                @{ Step=9;  Name='mDNS'   }
-                @{ Step=10; Name='Switch' }
-                @{ Step=11; Name='OUI'    }
-            )
-            foreach ($active in $activeSteps) {
+            # ---- Steps 5-11: Active probes ----
+            $openPortsList = @()
+
+            if (-not $SkipActiveProbes) {
+
+                # ---- Step 5: TCP fingerprint (always runs -- enrichment only) ----
+                Write-VBEnrichmentProgress -Current $current -Total $total -IPAddress $ip `
+                    -StepNumber 5 -LayerName 'TCP' -ElapsedMs $sw.ElapsedMilliseconds
+                Write-Verbose "[$ip] Step 5 TCP"
+
+                $tcpResult = Get-VBTCPFingerprint -IPAddress $ip -Context $Context
                 $layerTrace.Add([PSCustomObject]@{
-                    Step = $active.Step; Name = $active.Name
-                    Status = 'Skipped'; DurationMs = 0
-                    Detail = 'Active probes not yet implemented (Round 3)'
+                    Step       = 5
+                    Name       = 'TCP'
+                    Status     = $tcpResult.Status
+                    DurationMs = $tcpResult.ExecutionMs
+                    Detail     = if ($tcpResult.Status -eq 'Success') { $tcpResult.OpenPorts } else { $tcpResult.SkipReason + $tcpResult.ErrorDetail }
                 })
+                if ($tcpResult.Status -eq 'Success') {
+                    $state.OpenPorts = $tcpResult.OpenPorts
+                    $openPortsList   = $tcpResult.OpenPortsList
+                }
+                Write-Verbose "[$ip] Step 5 TCP -> $($tcpResult.Status) ports:$($tcpResult.OpenPorts)"
+
+                # ---- Step 6: HTTP banner (gated on 80/443/8080/8443 open) ----
+                Write-VBEnrichmentProgress -Current $current -Total $total -IPAddress $ip `
+                    -StepNumber 6 -LayerName 'HTTP' -ElapsedMs $sw.ElapsedMilliseconds
+
+                $httpGatePorts = @(80, 443, 8080, 8443)
+                $httpOpen = @($openPortsList | Where-Object { $httpGatePorts -contains $_ })
+
+                if ($httpOpen.Count -gt 0) {
+                    Write-Verbose "[$ip] Step 6 HTTP"
+                    $httpResult = Get-VBHTTPBanner -IPAddress $ip -OpenPortsList $openPortsList -Context $Context
+                    $layerTrace.Add([PSCustomObject]@{
+                        Step       = 6
+                        Name       = 'HTTP'
+                        Status     = $httpResult.Status
+                        DurationMs = $httpResult.ExecutionMs
+                        Detail     = if ($httpResult.Status -eq 'Success') { "$($httpResult.HTTPTitle) [$($httpResult.HTTPServer)]" } else { $httpResult.SkipReason + $httpResult.ErrorDetail }
+                    })
+                    if ($httpResult.Status -eq 'Success') {
+                        $state.HTTPTitle  = $httpResult.HTTPTitle
+                        $state.HTTPServer = $httpResult.HTTPServer
+                        # HTTP hostname resolution (conclusive title only) handled in Resolve-VBDeviceClass
+                    }
+                    Write-Verbose "[$ip] Step 6 HTTP -> $($httpResult.Status)"
+                }
+                else {
+                    $layerTrace.Add([PSCustomObject]@{
+                        Step = 6; Name = 'HTTP'; Status = 'Skipped'; DurationMs = 0
+                        Detail = 'No HTTP ports open (80/443/8080/8443)'
+                    })
+                    Write-Verbose "[$ip] Step 6 HTTP -> Skipped (no HTTP ports open)"
+                }
+
+                # ---- Step 7: SNMP (gated on port 161 open OR SNMP probing not blocked) ----
+                Write-VBEnrichmentProgress -Current $current -Total $total -IPAddress $ip `
+                    -StepNumber 7 -LayerName 'SNMP' -ElapsedMs $sw.ElapsedMilliseconds
+
+                # SNMP is UDP so TCP scan won't find it -- always attempt if SNMP is available
+                if ($Context -and $Context.SNMPAvailable) {
+                    Write-Verbose "[$ip] Step 7 SNMP"
+                    $snmpResult = Get-VBSNMPIdentity -IPAddress $ip -Context $Context
+                    $layerTrace.Add([PSCustomObject]@{
+                        Step       = 7
+                        Name       = 'SNMP'
+                        Status     = $snmpResult.Status
+                        DurationMs = $snmpResult.ExecutionMs
+                        Detail     = if ($snmpResult.Status -eq 'Success') { "$($snmpResult.SNMPDescr) loc:$($snmpResult.Location)" } else { $snmpResult.SkipReason + $snmpResult.ErrorDetail }
+                    })
+                    if ($snmpResult.Status -eq 'Success') {
+                        $state.SNMPDescr = $snmpResult.SNMPDescr
+                        $state.Location  = $snmpResult.Location
+                        if (-not $state.IsResolved -and -not [string]::IsNullOrWhiteSpace($snmpResult.Hostname)) {
+                            $state.Hostname       = $snmpResult.Hostname
+                            $state.HostnameSource = 'SNMP'
+                            $state.IsResolved     = $true
+                        }
+                    }
+                    Write-Verbose "[$ip] Step 7 SNMP -> $($snmpResult.Status)"
+                }
+                else {
+                    $layerTrace.Add([PSCustomObject]@{
+                        Step = 7; Name = 'SNMP'; Status = 'Skipped'; DurationMs = 0
+                        Detail = 'SNMP unavailable (olePrn COM not present)'
+                    })
+                    Write-Verbose "[$ip] Step 7 SNMP -> Skipped (unavailable)"
+                }
+
+                # ---- Steps 8-10: RTSP, mDNS, Switch -- Round 4 ----
+                foreach ($stub in @(
+                    @{ Step=8;  Name='RTSP';   Detail='Round 4' }
+                    @{ Step=9;  Name='mDNS';   Detail='Round 4' }
+                    @{ Step=10; Name='Switch';  Detail='Round 4' }
+                )) {
+                    $layerTrace.Add([PSCustomObject]@{
+                        Step = $stub.Step; Name = $stub.Name
+                        Status = 'Skipped'; DurationMs = 0
+                        Detail = $stub.Detail
+                    })
+                }
+
             }
+            else {
+                # -SkipActiveProbes -- stub out 5-10
+                foreach ($stub in @(
+                    @{ Step=5;  Name='TCP'    }
+                    @{ Step=6;  Name='HTTP'   }
+                    @{ Step=7;  Name='SNMP'   }
+                    @{ Step=8;  Name='RTSP'   }
+                    @{ Step=9;  Name='mDNS'   }
+                    @{ Step=10; Name='Switch' }
+                )) {
+                    $layerTrace.Add([PSCustomObject]@{
+                        Step = $stub.Step; Name = $stub.Name
+                        Status = 'Skipped'; DurationMs = 0
+                        Detail = '-SkipActiveProbes set'
+                    })
+                }
+            }
+
+            # ---- Step 11: OUI vendor (always runs if MAC known) ----
+            Write-VBEnrichmentProgress -Current $current -Total $total -IPAddress $ip `
+                -StepNumber 11 -LayerName 'OUI' -ElapsedMs $sw.ElapsedMilliseconds
+            Write-Verbose "[$ip] Step 11 OUI"
+
+            $ouiResult = Get-VBOUIVendor -MACAddress $state.MACAddress -IPAddress $ip -Context $Context
+            $layerTrace.Add([PSCustomObject]@{
+                Step       = 11
+                Name       = 'OUI'
+                Status     = $ouiResult.Status
+                DurationMs = $ouiResult.ExecutionMs
+                Detail     = if ($ouiResult.Status -eq 'Success') { $ouiResult.Vendor } else { $ouiResult.SkipReason + $ouiResult.ErrorDetail }
+            })
+            if ($ouiResult.Status -eq 'Success') {
+                $state.OUIVendor        = $ouiResult.Vendor
+                $state.VendorDeviceClass = $ouiResult.VendorDeviceClass
+            }
+            Write-Verbose "[$ip] Step 11 OUI -> $($ouiResult.Status) vendor:$($ouiResult.Vendor)"
 
             # ---- Classification ----
             Write-VBEnrichmentProgress -Current $current -Total $total -IPAddress $ip `

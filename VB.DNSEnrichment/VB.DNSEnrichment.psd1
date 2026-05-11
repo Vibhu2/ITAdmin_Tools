@@ -7,7 +7,7 @@
 @{
 
     # -- Module identity
-    ModuleVersion     = '0.2.0'
+    ModuleVersion     = '0.3.0'
     GUID              = '4bbf090c-c895-4a7f-babd-fa826a1787c1'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Internal IT'
@@ -37,7 +37,11 @@
         'Resolve-VBDeviceClass',
         'Invoke-VBIPEnrichment',
         'Get-VBEnrichmentResult',
-        'Export-VBEnrichmentResult'
+        'Export-VBEnrichmentResult',
+        'Get-VBTCPFingerprint',
+        'Get-VBHTTPBanner',
+        'Get-VBSNMPIdentity',
+        'Get-VBOUIVendor'
     )
 
     # -- Not exporting cmdlets, variables, or aliases
@@ -51,6 +55,14 @@
             Tags         = @('DNS', 'Enrichment', 'IP', 'SQLite', 'AD', 'DHCP', 'SNMP', 'Networking')
             ProjectUri   = 'https://github.com/VibhuBhatnagar/ITAdmin_Tools'
             ReleaseNotes = @"
+v0.3.0 (2026-05-11) -- Round 3: Active probe layers (TCP, HTTP, SNMP, OUI)
+- Get-VBTCPFingerprint: 24-port async concurrent scan using BeginConnect/WaitOne (~300 ms)
+- Get-VBHTTPBanner: title + Server header, PS 5.1 cert callback workaround, 4-port fallback chain
+- Get-VBSNMPIdentity: olePrn COM sysDescr/sysName/sysLocation, community string iteration
+- Get-VBOUIVendor: IEEE OUI CSV auto-download + 30-day refresh, session hashtable cache, vendor->class map
+- Invoke-VBIPEnrichment: active probe stubs replaced; SNMP gates on context flag; OUI always runs if MAC known
+- Orchestrator now wires HTTP/SNMP hostname resolution into IsResolved gate
+
 v0.2.0 (2026-05-11) -- Round 2: Passive layers + orchestrator (Phase 6 ship gate)
 - Get-VBADComputer (Layer 1): one-shot AD cache, OSClass/OU detection
 - Get-VBDHCPLease (Layer 2): one-shot DHCP lease cache across all scopes

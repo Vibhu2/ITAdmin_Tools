@@ -1,6 +1,6 @@
 # ============================================================
 # SCRIPT   : Test-VBDNSEnrichmentModule.ps1
-# VERSION  : 1.0.0
+# VERSION  : 1.1.0
 # AUTHOR   : VB
 # PURPOSE  : Production validation of VB.DNSEnrichment v0.4.0
 #            Exercises every public function, layer, export format,
@@ -169,10 +169,10 @@ Write-Host ""
 Write-Host "  [SECTION 2] Initialize-VBEnrichmentDatabase" -ForegroundColor DarkCyan
 
 try {
-    Initialize-VBEnrichmentDatabase -Context $ctx
+    Initialize-VBEnrichmentDatabase -DatabasePath $ctx.DatabasePath
     Assert-True '2-DB' 'Database file created'          { Test-Path -LiteralPath $ctx.DatabasePath } $ctx.DatabasePath
     Assert-True '2-DB' 'Idempotent (second call safe)'  {
-        Initialize-VBEnrichmentDatabase -Context $ctx
+        Initialize-VBEnrichmentDatabase -DatabasePath $ctx.DatabasePath
         $true
     } 'No error on second call'
 } catch {
@@ -358,7 +358,8 @@ $classTests = @(
 
 foreach ($t in $classTests) {
     try {
-        $r = Resolve-VBDeviceClass @($t.Params)
+        $splat = $t.Params
+        $r = Resolve-VBDeviceClass @splat
         Assert-True '4-Classify' $t.Label {
             $r.DeviceClass -eq $t.Expect
         } "Got: $($r.DeviceClass) ($($r.Confidence))"
@@ -467,8 +468,10 @@ try {
 try {
     $withHistory = Get-VBEnrichmentResult -IPAddress $IPAddress[0] -IncludeHistory -Context $ctx
     Assert-True '6-Query' 'IncludeHistory adds History property' {
-        $null -ne ($withHistory | Select-Object -First 1).History
-    }
+        $first = $withHistory | Select-Object -First 1
+        # Property must exist on the object (may be empty array for a first-seen IP with no changes)
+        $null -ne $first -and ($first.PSObject.Properties.Name -contains 'History')
+    } "History rows: $(@($withHistory | Select-Object -First 1 -ExpandProperty History -ErrorAction SilentlyContinue).Count)"
 } catch {
     Write-TestResult '6-Query' 'IncludeHistory' 'FAIL' $_.Exception.Message; $FAIL++
 }

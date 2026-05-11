@@ -122,7 +122,14 @@ function Invoke-VBIPEnrichment {
 
     process {
         foreach ($ip in $IPAddress) {
-            $allIPs.Add($ip)
+            $val = if ($ip -is [string]) {
+                $ip
+            } elseif ($ip.IPAddress)   { [string]$ip.IPAddress
+            } elseif ($ip.IP_Address)  { [string]$ip.IP_Address
+            } elseif ($ip.'IP Address') { [string]$ip.'IP Address'
+            } elseif ($ip.IP)          { [string]$ip.IP
+            } else                     { [string]$ip }
+            $allIPs.Add($val)
         }
     }
 

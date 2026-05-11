@@ -15,7 +15,7 @@
 [CmdletBinding()]
 param(
     # --- Required: at least one private IP to probe ---
-    [Parameter(Mandatory)]
+    [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
     [string[]]$IPAddress,
 
     # --- Optional: DHCP server FQDN or IP ---

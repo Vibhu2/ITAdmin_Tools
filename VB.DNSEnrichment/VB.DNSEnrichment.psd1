@@ -7,7 +7,7 @@
 @{
 
     # -- Module identity
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
     GUID              = '4bbf090c-c895-4a7f-babd-fa826a1787c1'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Internal IT'
@@ -29,7 +29,15 @@
     # Round 1 ships only the context/storage layer; subsequent rounds add layers.
     FunctionsToExport = @(
         'Get-VBEnrichmentContext',
-        'Initialize-VBEnrichmentDatabase'
+        'Initialize-VBEnrichmentDatabase',
+        'Get-VBADComputer',
+        'Get-VBDHCPLease',
+        'Get-VBPTRRecord',
+        'Get-VBARPEntry',
+        'Resolve-VBDeviceClass',
+        'Invoke-VBIPEnrichment',
+        'Get-VBEnrichmentResult',
+        'Export-VBEnrichmentResult'
     )
 
     # -- Not exporting cmdlets, variables, or aliases
@@ -43,6 +51,16 @@
             Tags         = @('DNS', 'Enrichment', 'IP', 'SQLite', 'AD', 'DHCP', 'SNMP', 'Networking')
             ProjectUri   = 'https://github.com/VibhuBhatnagar/ITAdmin_Tools'
             ReleaseNotes = @"
+v0.2.0 (2026-05-11) -- Round 2: Passive layers + orchestrator (Phase 6 ship gate)
+- Get-VBADComputer (Layer 1): one-shot AD cache, OSClass/OU detection
+- Get-VBDHCPLease (Layer 2): one-shot DHCP lease cache across all scopes
+- Get-VBPTRRecord (Layer 3): PTR lookup with forward-confirmation, PS5.1 fallback
+- Get-VBARPEntry (Layer 4): arp -a cache with optional ping-to-populate
+- Resolve-VBDeviceClass: 13-tier classification logic (pure signal -> class)
+- Invoke-VBIPEnrichment: orchestrator with SQLite cache, stale-row detection, DHCP churn history
+- Get-VBEnrichmentResult: SQLite query with IP/class/date/unresolved filters
+- Export-VBEnrichmentResult: CSV (UTF-8 BOM) / JSON / Object pipeline pass-through
+
 v0.1.0 (2026-05-10) -- Round 1: Skeleton + Context + Storage
 - Module skeleton (manifest, loader, .editorconfig)
 - Sql/001_init.sql schema (Enrichment, EnrichmentHistory, SchemaVersion)

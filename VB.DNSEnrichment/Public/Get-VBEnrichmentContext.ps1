@@ -440,9 +440,8 @@ function Get-VBEnrichmentContext {
     if ($networkProbeEnabled) {
         & $addReport 4 'ARP Cache'      'Available' 'Native -- arp -a'                 'Layer 4 (ARP)'  '' '' ''
         & $addReport 5 'TCP Port Scan'  'Available' 'Network probe enabled'            'Layer 5 (TCP)'  '' '' ''
-        & $addReport 6 'HTTP Banner'    'Available' (
-            if ($canSkipCertCheck) { 'PS 6+ native cert bypass' } else { 'PS 5.1 -- cert callback workaround' }
-        ) 'Layer 6 (HTTP)' '' '' ''
+        $httpBannerDetail = if ($canSkipCertCheck) { 'PS 6+ native cert bypass' } else { 'PS 5.1 -- cert callback workaround' }
+        & $addReport 6 'HTTP Banner'    'Available' $httpBannerDetail 'Layer 6 (HTTP)' '' '' ''
         & $addReport 8 'RTSP Probe'     'Available' 'Network probe enabled'            'Layer 8 (RTSP)' '' '' ''
     }
     else {

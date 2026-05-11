@@ -1,7 +1,10 @@
 # ============================================================
 # MODULE   : VB.DNSEnrichment.psm1
-# VERSION  : 0.1.0
+# VERSION  : 0.4.0
 # CHANGED  : 2026-05-10 -- Round 1: skeleton + context + storage
+#            2026-05-11 -- Round 2: passive layers + orchestrator
+#            2026-05-11 -- Round 3: active probes TCP/HTTP/SNMP/OUI wired in
+#            2026-05-11 -- Round 4: RTSP/mDNS/SwitchARP layers; PS7 parallel active probes
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Module loader -- dot-sources all Private and Public functions
 # ENCODING : UTF-8 with BOM

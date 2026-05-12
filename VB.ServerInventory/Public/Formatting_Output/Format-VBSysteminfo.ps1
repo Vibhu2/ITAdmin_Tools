@@ -102,6 +102,3 @@ function Format-VBSystemInfo {
         }
     }
 }
-
-Get-VBSystemInfo | Format-VBSystemInfo
-Get-VBSystemInfo | Format-VBSystemInfo -OutputPath "C:\Reports\SystemInfo.txt"

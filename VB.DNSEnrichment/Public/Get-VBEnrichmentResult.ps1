@@ -119,7 +119,7 @@ function Get-VBEnrichmentResult {
         $rows = Invoke-VBSqliteCommand -DatabasePath $dbPath -Query $sql -SqlParameters $sqlParams
 
         foreach ($row in $rows) {
-            $obj = Invoke-VBBuildEnrichmentObject -Row $row -FromCache $true
+            $obj = ConvertFrom-VBSqliteEnrichmentRow -Row $row -FromCache $true
 
             if ($IncludeHistory) {
                 try {

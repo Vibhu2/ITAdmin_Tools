@@ -49,6 +49,7 @@ function Get-VBRTSPBanner {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]

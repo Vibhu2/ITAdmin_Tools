@@ -50,6 +50,7 @@ function Get-VBDHCPLease {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]
@@ -62,6 +63,16 @@ function Get-VBDHCPLease {
 
         if (-not $Context) {
             Write-Warning "[$LAYER_NAME] No context provided -- running without prerequisite validation."
+        }
+
+        $CacheTTLMinutes = 60
+        if ($null -ne $Script:VBDhcpLeaseCache) {
+            $ageMin = ((Get-Date) - $Script:VBDhcpCacheBuiltAt).TotalMinutes
+            if ($ageMin -gt $CacheTTLMinutes) {
+                Write-Verbose "[$LAYER_NAME] DHCP cache is $([int]$ageMin) min old (TTL $CacheTTLMinutes min) -- rebuilding"
+                $Script:VBDhcpLeaseCache = $null
+                $Script:VBDhcpCacheBuilt = $false
+            }
         }
 
         if ($null -eq $Script:VBDhcpLeaseCache) {
@@ -91,17 +102,27 @@ function Get-VBDHCPLease {
                     }
 
                     $Script:VBDhcpLeaseCache = @{}
+                    $failedScopes = [System.Collections.Generic.List[string]]::new()
                     foreach ($scopeId in $scopeIds) {
-                        $leases = Get-DhcpServerv4Lease -ScopeId $scopeId @serverSplat `
-                            -ErrorAction SilentlyContinue
-                        foreach ($lease in $leases) {
-                            if (-not [string]::IsNullOrWhiteSpace($lease.IPAddress)) {
-                                $Script:VBDhcpLeaseCache[$lease.IPAddress.ToString()] = $lease
+                        try {
+                            $leases = Get-DhcpServerv4Lease -ScopeId $scopeId @serverSplat -ErrorAction Stop
+                            foreach ($lease in $leases) {
+                                if (-not [string]::IsNullOrWhiteSpace($lease.IPAddress)) {
+                                    $Script:VBDhcpLeaseCache[$lease.IPAddress.ToString()] = $lease
+                                }
                             }
                         }
+                        catch {
+                            $failedScopes.Add($scopeId)
+                            Write-Warning "[$LAYER_NAME] Scope $scopeId failed to enumerate: $($_.Exception.Message)"
+                        }
+                    }
+                    if ($failedScopes.Count -gt 0) {
+                        Write-Warning "[$LAYER_NAME] $($failedScopes.Count) of $($scopeIds.Count) scopes failed. IPs in these scopes will not be DHCP-resolved: $($failedScopes -join ', ')"
                     }
 
-                    $Script:VBDhcpCacheBuilt = $true
+                    $Script:VBDhcpCacheBuilt   = $true
+                    $Script:VBDhcpCacheBuiltAt = Get-Date
                     Write-Verbose "[$LAYER_NAME] Cache built: $($Script:VBDhcpLeaseCache.Count) leases across $($scopeIds.Count) scope(s)"
                 }
                 catch {

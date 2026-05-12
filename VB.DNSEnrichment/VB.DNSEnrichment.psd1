@@ -7,7 +7,7 @@
 @{
 
     # -- Module identity
-    ModuleVersion     = '0.4.0'
+    ModuleVersion     = '0.5.0'
     GUID              = '4bbf090c-c895-4a7f-babd-fa826a1787c1'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Internal IT'

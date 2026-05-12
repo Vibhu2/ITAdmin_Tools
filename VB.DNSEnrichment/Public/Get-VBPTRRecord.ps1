@@ -50,6 +50,7 @@ function Get-VBPTRRecord {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]
@@ -114,7 +115,11 @@ function Get-VBPTRRecord {
                     $resolvedIPs = @($fwdEntry | ForEach-Object { $_.ToString() })
                 }
 
-                $forwardConfirmed = $resolvedIPs -contains $IPAddress
+                $parsedTarget = [System.Net.IPAddress]::Parse($IPAddress)
+                $forwardConfirmed = [bool]($resolvedIPs | Where-Object {
+                    try { [System.Net.IPAddress]::Parse($_).Equals($parsedTarget) }
+                    catch { $false }
+                } | Select-Object -First 1)
             }
             catch {
                 Write-Verbose "[$LAYER_NAME] Forward-confirm failed for $hostname`: $($_.Exception.Message)"

@@ -47,6 +47,7 @@ function Get-VBADComputer {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]
@@ -62,6 +63,16 @@ function Get-VBADComputer {
         }
 
         # One-shot cache: build on first call, reused for the lifetime of the session
+        $CacheTTLMinutes = 60
+        if ($null -ne $Script:VBAdComputerCache) {
+            $ageMin = ((Get-Date) - $Script:VBAdCacheBuiltAt).TotalMinutes
+            if ($ageMin -gt $CacheTTLMinutes) {
+                Write-Verbose "[$LAYER_NAME] AD cache is $([int]$ageMin) min old (TTL $CacheTTLMinutes min) -- rebuilding"
+                $Script:VBAdComputerCache = $null
+                $Script:VBAdCacheBuilt    = $false
+            }
+        }
+
         if ($null -eq $Script:VBAdComputerCache) {
             if ($Context -and -not $Context.ADAvailable) {
                 # AD unavailable -- leave cache as sentinel so we skip cleanly each call
@@ -90,7 +101,8 @@ function Get-VBADComputer {
                         }
                     }
 
-                    $Script:VBAdCacheBuilt = $true
+                    $Script:VBAdCacheBuilt   = $true
+                    $Script:VBAdCacheBuiltAt = Get-Date
                     Write-Verbose "[$LAYER_NAME] Cache built: $($Script:VBAdComputerCache.Count) computers, $($Script:VBAdDCIPs.Count) DCs"
                 }
                 catch {

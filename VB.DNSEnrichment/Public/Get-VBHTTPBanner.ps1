@@ -58,6 +58,7 @@ function Get-VBHTTPBanner {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]

@@ -85,7 +85,7 @@ function Invoke-VBIPEnrichment {
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
         [Alias('IP_Address', 'IP Address', 'IP')]
-        [object[]]$IPAddress,
+        [string[]]$IPAddress,
         [Parameter()]
         [PSCustomObject]$Context,
 
@@ -106,8 +106,6 @@ function Invoke-VBIPEnrichment {
     )
 
     begin {
-        $ErrorActionPreference = 'Stop'
-
         if (-not $Context) {
             Write-Verbose "[Orchestrator] No context provided -- auto-building context."
             $Context = Get-VBEnrichmentContext -Quiet
@@ -123,14 +121,7 @@ function Invoke-VBIPEnrichment {
 
     process {
         foreach ($ip in $IPAddress) {
-            $val = if ($ip -is [string]) {
-                $ip
-            } elseif ($ip.IPAddress)   { [string]$ip.IPAddress
-            } elseif ($ip.IP_Address)  { [string]$ip.IP_Address
-            } elseif ($ip.'IP Address') { [string]$ip.'IP Address'
-            } elseif ($ip.IP)          { [string]$ip.IP
-            } else                     { [string]$ip }
-            $allIPs.Add($val)
+            $allIPs.Add($ip)
         }
     }
 
@@ -155,9 +146,15 @@ function Invoke-VBIPEnrichment {
         $cachedRows = @{}
         if ($dbEnabled) {
             try {
-                $placeholders = ($validIPs | ForEach-Object { "'$_'" }) -join ','
+                $paramHash = @{}
+                $placeholders = for ($i = 0; $i -lt $validIPs.Count; $i++) {
+                    $paramHash["ip$i"] = $validIPs[$i]
+                    "@ip$i"
+                }
+                $inClause = $placeholders -join ','
                 $rows = Invoke-VBSqliteCommand -DatabasePath $dbPath `
-                    -Query "SELECT * FROM Enrichment WHERE IPAddress IN ($placeholders)"
+                    -Query "SELECT * FROM Enrichment WHERE IPAddress IN ($inClause)" `
+                    -SqlParameters $paramHash
                 foreach ($row in $rows) {
                     $cachedRows[$row.IPAddress] = $row
                 }
@@ -190,7 +187,7 @@ function Invoke-VBIPEnrichment {
             }
             else {
                 # Return from cache
-                $fromCache.Add((Invoke-VBBuildEnrichmentObject -Row $existing -FromCache $true))
+                $fromCache.Add((ConvertFrom-VBSqliteEnrichmentRow -Row $existing -FromCache $true))
             }
         }
 
@@ -303,9 +300,9 @@ function Invoke-VBIPEnrichment {
                     DurationMs = $ptrResult.ExecutionMs
                     Detail     = $ptrDetail
                 })
-                if ($ptrResult.Status -eq 'Success' -and $ptrResult.ForwardConfirmed) {
+                if ($ptrResult.Status -eq 'Success' -and -not [string]::IsNullOrWhiteSpace($ptrResult.Hostname)) {
                     $state.Hostname       = $ptrResult.Hostname
-                    $state.HostnameSource = 'PTR'
+                    $state.HostnameSource = if ($ptrResult.ForwardConfirmed) { 'PTR' } else { 'PTR-Unconfirmed' }
                     $state.IsResolved     = $true
                 }
                 Write-Verbose "[$ip] Step 3 PTR -> $($ptrResult.Status)"
@@ -368,13 +365,23 @@ function Invoke-VBIPEnrichment {
 
             $throttle   = $Context.ParallelThrottleLimit
             $modulePath = (Get-Module -Name 'VB.DNSEnrichment' | Select-Object -ExpandProperty Path -First 1)
+            if (-not $modulePath) {
+                throw "[Orchestrator] Cannot resolve VB.DNSEnrichment module path for parallel block."
+            }
+
+            # Pre-warm OUI table in main scope so $using: can pass it into runspaces
+            $null = Get-VBOUIVendor -MACAddress '000000000000' -Context $Context
+            $ouiTableSnapshot = $Script:VBOUITable
 
             $parallelResults = $parallelInputs |
                 ForEach-Object -ThrottleLimit $throttle -Parallel {
                     $inp     = $_
                     $ctx     = $using:Context
                     $modPath = $using:modulePath
-                    Import-Module $modPath -ErrorAction Stop
+                    if (-not (Get-Module -Name 'VB.DNSEnrichment')) {
+                        Import-Module $modPath -ErrorAction Stop
+                    }
+                    $Script:VBOUITable = $using:ouiTableSnapshot
 
                     $ip            = $inp.IPAddress
                     $activeTrace   = New-Object System.Collections.Generic.List[PSCustomObject]
@@ -420,7 +427,7 @@ function Invoke-VBIPEnrichment {
                             if (-not $fields.IsResolved -and -not [string]::IsNullOrWhiteSpace($snmpResult.Hostname)) { $fields.Hostname=$snmpResult.Hostname; $fields.HostnameSource='SNMP'; $fields.IsResolved=$true }
                         }
                     } else {
-                        $activeTrace.Add([PSCustomObject]@{ Step=7; Name='SNMP'; Status='Skipped'; DurationMs=0; Detail='SNMP unavailable' })
+                        $activeTrace.Add([PSCustomObject]@{ Step=7; Name='SNMP'; Status='Skipped'; DurationMs=0; Detail='SNMP unavailable (olePrn COM not present)' })
                     }
 
                     # Step 8 RTSP
@@ -677,14 +684,14 @@ function Invoke-VBIPEnrichment {
                 try {
                     $upsertSql = @'
 INSERT INTO Enrichment (
-    IPAddress, Hostname, HostnameSource, MACAddress, MACAddressNormalised,
+    IPAddress, Hostname, HostnameSource, MACAddress, MACAddressNormalised, Vendor,
     DeviceClass, DeviceClassSource, Confidence, OSClass, OperatingSystem,
     OU, OpenPorts, LeaseExpiry, StepsAttempted, StepsSucceeded,
     StepsNoResult, StepsSkipped, StepsFailed, LayerTraceJson,
     IsResolved, IsUnresolved, EnrichedAt, EnrichmentDurationMs,
     FirstSeenAt, UpdatedAt
 ) VALUES (
-    @ip, @hostname, @hostnameSource, @mac, @macNorm,
+    @ip, @hostname, @hostnameSource, @mac, @macNorm, @vendor,
     @deviceClass, @deviceClassSource, @confidence, @osClass, @os,
     @ou, @openPorts, @leaseExpiry, @attempted, @succeeded,
     @noResult, @skipped, @failed, @traceJson,
@@ -696,6 +703,7 @@ ON CONFLICT(IPAddress) DO UPDATE SET
     HostnameSource        = excluded.HostnameSource,
     MACAddress            = excluded.MACAddress,
     MACAddressNormalised  = excluded.MACAddressNormalised,
+    Vendor                = excluded.Vendor,
     DeviceClass           = excluded.DeviceClass,
     DeviceClassSource     = excluded.DeviceClassSource,
     Confidence            = excluded.Confidence,
@@ -720,13 +728,14 @@ ON CONFLICT(IPAddress) DO UPDATE SET
                     $isUnresolved    = if ($classResult.DeviceClass -eq 'Unknown') { 1 } else { 0 }
                     $leaseExpiryVal  = if ($state.LeaseExpiry) { $state.LeaseExpiry.ToString('o') } else { $null }
 
-                    Invoke-VBSqliteCommand -DatabasePath $dbPath -NonQuery -Query $upsertSql `
+                    Invoke-VBSqliteCommand -DatabasePath $dbPath-Query $upsertSql `
                         -SqlParameters @{
                             ip               = $ip
                             hostname         = $state.Hostname
                             hostnameSource   = $state.HostnameSource
                             mac              = $state.MACAddress
                             macNorm          = $state.MACNormalised
+                            vendor           = $state.OUIVendor
                             deviceClass      = $classResult.DeviceClass
                             deviceClassSource = $classResult.DeviceClassSource
                             confidence       = $classResult.Confidence
@@ -760,7 +769,7 @@ INSERT INTO EnrichmentHistory (
     @oldClass, @newClass, @reason, @changedAt
 )
 '@
-                        Invoke-VBSqliteCommand -DatabasePath $dbPath -NonQuery -Query $historySql `
+                        Invoke-VBSqliteCommand -DatabasePath $dbPath-Query $historySql `
                             -SqlParameters @{
                                 ip          = $ip
                                 oldHostname = $existing.Hostname
@@ -833,66 +842,5 @@ INSERT INTO EnrichmentHistory (
         if (-not $PassThru) {
             foreach ($r in $results) { $r }
         }
-    }
-}
-
-function Invoke-VBBuildEnrichmentObject {
-<#
-.SYNOPSIS
-    Reconstruct an enrichment PSCustomObject from a SQLite row.
-    Private helper used by Invoke-VBIPEnrichment.
-#>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        $Row,
-
-        [Parameter()]
-        [bool]$FromCache = $false
-    )
-
-    $layerTrace = @()
-    if ($Row.LayerTraceJson) {
-        try {
-            $layerTrace = $Row.LayerTraceJson | ConvertFrom-Json
-        }
-        catch { }
-    }
-
-    [PSCustomObject]@{
-        IPAddress            = $Row.IPAddress
-        Hostname             = $Row.Hostname
-        HostnameSource       = $Row.HostnameSource
-        MACAddress           = $Row.MACAddress
-        MACAddressNormalised = $Row.MACAddressNormalised
-        Vendor               = $Row.Vendor
-        DeviceClass          = $Row.DeviceClass
-        DeviceClassSource    = $Row.DeviceClassSource
-        Confidence           = $Row.Confidence
-        OSClass              = $Row.OSClass
-        OperatingSystem      = $Row.OperatingSystem
-        Model                = $Row.Model
-        Location             = $Row.Location
-        OU                   = $Row.OU
-        OpenPorts            = $Row.OpenPorts
-        HTTPTitle            = $Row.HTTPTitle
-        HTTPServer           = $Row.HTTPServer
-        SNMPDescr            = $Row.SNMPDescr
-        RTSPBanner           = $Row.RTSPBanner
-        MDNSServiceType      = $Row.MDNSServiceType
-        StepsAttempted       = [int]$Row.StepsAttempted
-        StepsSucceeded       = [int]$Row.StepsSucceeded
-        StepsNoResult        = [int]$Row.StepsNoResult
-        StepsSkipped         = [int]$Row.StepsSkipped
-        StepsFailed          = [int]$Row.StepsFailed
-        LayerTrace           = $layerTrace
-        IsResolved           = [bool]$Row.IsResolved
-        IsUnresolved         = [bool]$Row.IsUnresolved
-        EnrichedAt           = if ($Row.EnrichedAt)  { [datetime]$Row.EnrichedAt }  else { $null }
-        EnrichmentDurationMs = [int]$Row.EnrichmentDurationMs
-        FirstSeenAt          = if ($Row.FirstSeenAt) { [datetime]$Row.FirstSeenAt } else { $null }
-        UpdatedAt            = if ($Row.UpdatedAt)   { [datetime]$Row.UpdatedAt }   else { $null }
-        ChangeReason         = 'NoChange'
-        FromCache            = $FromCache
     }
 }

@@ -40,7 +40,7 @@ function Initialize-VBEnrichmentDatabase {
     )
 
     $computer       = $env:COMPUTERNAME
-    $collectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+    $collectionTime = (Get-Date).ToString('o')
 
     try {
         # --- Step 1 -- Ensure parent folder exists ---
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS SchemaVersion (
     AppliedAt  TEXT NOT NULL
 );
 '@
-        Invoke-VBSqliteCommand -DatabasePath $DatabasePath -NonQuery -Query $bootstrapSql | Out-Null
+        Invoke-VBSqliteCommand -DatabasePath $DatabasePath-Query $bootstrapSql | Out-Null
 
         # --- Step 4 -- Read currently-applied versions ---
         $appliedRows = Invoke-VBSqliteCommand -DatabasePath $DatabasePath `
@@ -97,9 +97,9 @@ CREATE TABLE IF NOT EXISTS SchemaVersion (
 
             Write-Verbose "[Init-DB] Applying migration $($file.Name)"
             $sql = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
-            Invoke-VBSqliteCommand -DatabasePath $DatabasePath -NonQuery -Query $sql | Out-Null
+            Invoke-VBSqliteCommand -DatabasePath $DatabasePath-Query $sql | Out-Null
 
-            Invoke-VBSqliteCommand -DatabasePath $DatabasePath -NonQuery `
+            Invoke-VBSqliteCommand -DatabasePath $DatabasePath`
                 -Query 'INSERT OR IGNORE INTO SchemaVersion (Version, AppliedAt) VALUES (@v, @t)' `
                 -SqlParameters @{ v = $version; t = (Get-Date).ToString('o') } | Out-Null
 

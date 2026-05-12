@@ -101,17 +101,10 @@ function New-VBLayerResult {
         SkipReason     = $SkipReason
         Impact         = $Impact
         ErrorDetail    = $ErrorDetail
-        CollectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+        CollectionTime = (Get-Date).ToString('o')
     }
 
-    foreach ($key in $ExtraFields.Keys) {
-        if (-not $base.Contains($key)) {
-            $base[$key] = $ExtraFields[$key]
-        }
-        else {
-            $base[$key] = $ExtraFields[$key]
-        }
-    }
+    foreach ($key in $ExtraFields.Keys) { $base[$key] = $ExtraFields[$key] }
 
     [PSCustomObject]$base
 }

@@ -55,6 +55,7 @@ function Get-VBSNMPIdentity {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]
@@ -77,7 +78,10 @@ function Get-VBSNMPIdentity {
         }
 
         $communityStrings = if ($Context -and $Context.SNMPCommunityStrings.Count -gt 0) {
-            $Context.SNMPCommunityStrings
+            @($Context.SNMPCommunityStrings | ForEach-Object {
+                [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($_))
+            })
         }
         else {
             @('public')

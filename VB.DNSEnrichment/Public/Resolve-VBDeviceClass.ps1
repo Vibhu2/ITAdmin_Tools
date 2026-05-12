@@ -142,9 +142,12 @@ function Resolve-VBDeviceClass {
             break
         }
 
-        # Tier 2 -- Cameras (RTSP is exclusive to cameras/NVR)
+        # Tier 2 -- Cameras (port 554 alone is insufficient -- require banner or vendor match too)
         (
-            $ports -contains 554 -or
+            ($ports -contains 554 -and
+                (-not [string]::IsNullOrWhiteSpace($RTSPBanner) -or
+                 $combined -match 'hikvision|dahua|axis|hanwha|bosch.*security|milestone|reolink|amcrest')
+            ) -or
             $RTSPBanner -match 'RTSP' -or
             $combined -match 'hikvision|dahua|axis|hanwha|bosch.*security|milestone|reolink|amcrest'
         ) {
@@ -274,7 +277,10 @@ function Resolve-VBDeviceClass {
         'IPPhone'          { 'High' }
         'Printer'          { 'High' }
         'Camera'           {
-            if ($ports -contains 554) { 'High' } else { 'Medium' }
+            if (-not [string]::IsNullOrWhiteSpace($RTSPBanner) -or
+                $combined -match 'hikvision|dahua|axis') { 'High' }
+            elseif ($ports -contains 554) { 'Medium' }
+            else { 'Low' }
         }
         'Unknown'          { 'None' }
         default            { 'Medium' }

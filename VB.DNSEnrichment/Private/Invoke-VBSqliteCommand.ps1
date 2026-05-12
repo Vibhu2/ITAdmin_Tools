@@ -9,10 +9,6 @@ function Invoke-VBSqliteCommand {
     minimal -- it does not pool connections or open transactions; PSSQLite manages
     the connection lifecycle per call.
 
-    Two modes:
-        -Query        Execute SQL and return rows ([PSCustomObject[]])
-        -NonQuery     Execute SQL with no result set; returns rows-affected ([int])
-
 .PARAMETER DatabasePath
     Full path to the SQLite database file.
 
@@ -22,29 +18,25 @@ function Invoke-VBSqliteCommand {
 .PARAMETER SqlParameters
     Hashtable of named parameters referenced as @name in the SQL text.
 
-.PARAMETER NonQuery
-    Switch -- treat the statement as INSERT/UPDATE/DELETE/DDL and return the
-    rows-affected count rather than result rows.
-
 .OUTPUTS
-    [PSCustomObject[]] when -NonQuery is omitted.
-    [int]              when -NonQuery is supplied.
+    [PSCustomObject[]] for SELECT statements; rows-affected [int] for DML/DDL.
 
 .EXAMPLE
     Invoke-VBSqliteCommand -DatabasePath $db -Query 'SELECT * FROM Enrichment WHERE IPAddress = @ip' `
         -SqlParameters @{ ip = '192.168.1.45' }
 
 .EXAMPLE
-    Invoke-VBSqliteCommand -DatabasePath $db -NonQuery `
+    Invoke-VBSqliteCommand -DatabasePath $db `
         -Query 'INSERT INTO SchemaVersion (Version, AppliedAt) VALUES (@v, @t)' `
         -SqlParameters @{ v = 1; t = (Get-Date).ToString('o') }
 
 .NOTES
-    Version:      1.0.0
+    Version:      1.1.0
     MinPSVersion: 5.1
     Author:       VB
     ChangeLog:
         1.0.0 -- 2026-05-10 -- Initial release
+        1.1.0 -- 2026-05-12 -- Removed inert NonQuery switch (both branches were identical)
 #>
     [CmdletBinding()]
     param(
@@ -55,10 +47,7 @@ function Invoke-VBSqliteCommand {
         [string]$Query,
 
         [Parameter()]
-        [hashtable]$SqlParameters = @{},
-
-        [Parameter()]
-        [switch]$NonQuery
+        [hashtable]$SqlParameters = @{}
     )
 
     if (-not (Get-Module -Name PSSQLite)) {
@@ -74,11 +63,5 @@ function Invoke-VBSqliteCommand {
         $splat['SqlParameters'] = $SqlParameters
     }
 
-    if ($NonQuery) {
-        # PSSQLite returns affected-rows count when the statement is non-SELECT
-        Invoke-SqliteQuery @splat
-    }
-    else {
-        Invoke-SqliteQuery @splat
-    }
+    Invoke-SqliteQuery @splat
 }

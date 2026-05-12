@@ -61,13 +61,14 @@ function Get-VBTCPFingerprint {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
         [string]$IPAddress,
 
         [Parameter()]
         [PSCustomObject]$Context,
 
         [Parameter()]
-        [int]$TimeoutMs = 300
+        [int]$TimeoutMs = 1000
     )
 
     begin {

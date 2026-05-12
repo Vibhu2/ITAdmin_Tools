@@ -6,7 +6,7 @@
 
 @{
     # Module identity
-    ModuleVersion     = '1.10.3'
+    ModuleVersion     = '1.10.4'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -36,6 +36,7 @@
             HelpInfoUri  = 'https://pwsh.in/posts/printer-mapping-powershell-vb-workstationreport/'
             LinkedinUri  = 'https://www.linkedin.com/in/vibhu-bhatnagar-02622798/'
             ReleaseNotes = @'
+v1.10.4 -- 12-05-2026 -- Structural fix: Add-VBUserPrinter moved to Printer_Management subfolder; Mount-VBUserHive and Dismount-VBUserHive moved to Private (no longer exported).
 v1.10.3 -- 04-05-2026 -- Set-VBUserPrinterMigration: Existing printer port corrected via Set-Printer; fixes UNC path in printer properties.
 v1.10.2 -- 04-05-2026 -- Set-VBUserPrinterMigration: Username filter now matches short name, DOMAIN\user, and profile folder name.
 v1.10.1 -- 04-05-2026 -- Set-VBUserPrinterMigration: Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop.

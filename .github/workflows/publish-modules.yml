@@ -156,6 +156,21 @@ jobs:
                   continue
               }
 
+              # --- Install RequiredModules so Test-ModuleManifest can resolve them ---
+              try {
+                  $rawManifest = Import-PowerShellDataFile -Path $manifestPath -ErrorAction Stop
+                  foreach ($req in $rawManifest.RequiredModules) {
+                      $reqName = if ($req -is [hashtable]) { $req.ModuleName } else { $req }
+                      if (-not (Get-Module -ListAvailable -Name $reqName)) {
+                          Write-Host "Installing dependency: $reqName"
+                          Install-Module -Name $reqName -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
+                      }
+                  }
+              }
+              catch {
+                  Write-Warning "Could not pre-install dependencies for $moduleName`: $_ — continuing anyway"
+              }
+
               # --- Validate manifest is well-formed ---
               try {
                   $manifest     = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop

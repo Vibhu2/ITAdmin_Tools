@@ -10,8 +10,8 @@
     ModuleVersion     = '0.5.0'
     GUID              = '4bbf090c-c895-4a7f-babd-fa826a1787c1'
     Author            = 'Vibhu Bhatnagar'
-    CompanyName       = 'Internal IT'
-    Copyright         = '(c) 2026 Vibhu Bhatnagar. All rights reserved.'
+    CompanyName       = 'pwsh.in'
+    Copyright         = '(c) 2026 Vibhu. All rights reserved.'
     Description       = 'Resolve private IP addresses to hostname, MAC, vendor, and device class through an 11-step enrichment pipeline. Persists results in SQLite for cross-run caching and DHCP churn analysis.'
 
     # -- Runtime requirements
@@ -55,8 +55,10 @@
     # -- Module metadata
     PrivateData = @{
         PSData = @{
-            Tags         = @('DNS', 'Enrichment', 'IP', 'SQLite', 'AD', 'DHCP', 'SNMP', 'Networking', 'RTSP', 'mDNS')
-            ProjectUri   = 'https://github.com/VibhuBhatnagar/ITAdmin_Tools'
+            Tags         = @('DNS', 'Enrichment', 'IP', 'SQLite', 'AD', 'DHCP', 'SNMP', 'Networking', 'RTSP', 'mDNS', 'PowerShell', 'Sysadmin', 'Windows', 'MSP', 'Automation', 'VBTools')
+            ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/tree/main/VB.DNSEnrichment'
+            LicenseUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/blob/main/LICENSE'
+            HelpInfoUri  = 'https://pwsh.in/posts/'
             ReleaseNotes = @"
 v0.4.0 (2026-05-11) -- Round 4: Sensor layers (RTSP, mDNS, Switch ARP) + PS7 parallel active probes
 - Get-VBRTSPBanner (Layer 8): TCP 554 banner grab; high-confidence camera/NVR signal

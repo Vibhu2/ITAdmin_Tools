@@ -7,7 +7,7 @@
 @{
 
     # -- Module identity
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '1.1.1'
     GUID              = 'a4c2e8f1-3b7d-4e91-82a0-5f6c9d1e4b23'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Internal IT'
@@ -46,6 +46,9 @@
             Tags         = @('DNS', 'SQLite', 'Logging', 'Analysis', 'WindowsDNS', 'Diagnostics', 'Security')
             ProjectUri   = 'https://github.com/VibhuBhatnagar/ITAdmin_Tools'
             ReleaseNotes = @"
+v1.1.1 (2026-05-20)
+- Patch release to trigger PSGallery publish (initial publish failed due to missing PSSQLite dependency on CI runner)
+
 v1.1.0 (2026-05-07)
 - Renamed module from DNSLogDB to VB.WindowsDNSLogAnalysis
 - Added TalkerDetail report type (per-IP query type and protocol breakdown)

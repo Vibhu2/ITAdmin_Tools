@@ -1,9 +1,9 @@
 # ============================================================
 # FUNCTION : Get-VBAzureADJoinStatus
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 2.0.0
+# CHANGED  : 24-05-2026 -- Merged flat PSCustomObject output with remote/pipeline support
 # AUTHOR   : Vibhu Bhatnagar
-# PURPOSE  : Retrieve detailed Azure AD join status from target computer
+# PURPOSE  : Retrieve detailed Azure AD join status from target computer(s)
 # ENCODING : UTF-8 with BOM
 # ============================================================
 
@@ -12,9 +12,9 @@
     Retrieve detailed Azure AD join status from target computer(s).
 
 .DESCRIPTION
-    Executes dsregcmd /status command on target computer to retrieve comprehensive
-    Azure AD join status information including device ID, tenant ID, and join state.
-    Returns full status output or error message if not joined.
+    Executes dsregcmd /status on target computer(s) and returns a flat PSCustomObject
+    with all keys as named properties — spaces stripped for clean Select-Object usage.
+    Supports local execution, remote via Invoke-Command, pipeline input, and alternate credentials.
 
 .PARAMETER ComputerName
     Target computer(s). Defaults to local machine. Accepts pipeline input.
@@ -33,15 +33,19 @@
 
 .EXAMPLE
     'SERVER01', 'SERVER02' | Get-VBAzureADJoinStatus
-    Retrieves Azure AD join status from multiple computers via pipeline.
+    Pipeline input — retrieves status from multiple computers.
+
+.EXAMPLE
+    Get-VBAzureADJoinStatus | Select-Object ComputerName, AzureAdJoined, TenantName, DeviceName
+    Select specific properties from flat output.
 
 .OUTPUTS
-    [PSCustomObject]: ComputerName, Status, CollectionTime, Details (or Error)
+    [PSCustomObject]: ComputerName, Status, CollectionTime + all dsregcmd keys as properties
 
 .NOTES
-    Version  : 1.0.2
+    Version  : 2.0.0
     Author   : Vibhu Bhatnagar
-    Modified : 10-04-2026
+    Modified : 24-05-2026
     Category : Security
 #>
 
@@ -51,54 +55,66 @@ function Get-VBAzureADJoinStatus {
         [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias('Name', 'Server', 'Host')]
         [string[]]$ComputerName = $env:COMPUTERNAME,
+
         [PSCredential]$Credential
     )
+
     process {
         foreach ($computer in $ComputerName) {
             try {
-                # Step 1 -- Define remote script block
+                # Step 1 -- Script block: parse dsregcmd into key/value pairs
                 $scriptBlock = {
-                    $statusOutput = dsregcmd /status 2>&1
-                    if ($statusOutput) {
-                        return @{
-                            Details = $statusOutput
-                            IsJoined = $true
+                    $raw = dsregcmd /status 2>&1 | Select-String ":" |
+                        ForEach-Object {
+                            $parts = $_.Line.Trim() -split "\s*:\s*", 2
+                            if ($parts.Count -eq 2) {
+                                [PSCustomObject]@{
+                                    Key   = $parts[0].Trim() -replace '\s+', ''
+                                    Value = $parts[1].Trim()
+                                }
+                            }
                         }
-                    } else {
-                        return @{
-                            Details = 'Not joined'
-                            IsJoined = $false
-                        }
-                    }
+                    return $raw
                 }
 
                 # Step 2 -- Execute locally or remotely
                 if ($computer -eq $env:COMPUTERNAME) {
-                    $result = & $scriptBlock
+                    $raw = & $scriptBlock
                 } else {
                     $splat = @{
                         ComputerName = $computer
-                        ScriptBlock = $scriptBlock
+                        ScriptBlock  = $scriptBlock
                     }
-                    if ($Credential) {
-                        $splat['Credential'] = $Credential
-                    }
-                    $result = Invoke-Command @splat
+                    if ($Credential) { $splat['Credential'] = $Credential }
+                    $raw = Invoke-Command @splat
                 }
 
-                # Step 3 -- Output result
-                [PSCustomObject]@{
-                    ComputerName = $computer
-                    Status = if ($result.IsJoined) { 'Joined' } else { 'Not Joined' }
-                    Details = $result.Details
+                # Step 3 -- Build flat object, seed with metadata properties
+                $obj = [PSCustomObject]@{
+                    ComputerName   = $computer
+                    Status         = 'Joined'
                     CollectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                 }
+
+                # Step 4 -- Add all dsregcmd keys as named properties
+                foreach ($item in $raw) {
+                    if ($item.Key -and -not ($obj.PSObject.Properties.Name -contains $item.Key)) {
+                        $obj | Add-Member -NotePropertyName $item.Key -NotePropertyValue $item.Value
+                    }
+                }
+
+                # Step 5 -- Set Status based on AzureAdJoined property
+                if ($obj.PSObject.Properties.Name -contains 'AzureAdJoined') {
+                    $obj.Status = if ($obj.AzureAdJoined -eq 'YES') { 'Joined' } else { 'Not Joined' }
+                }
+
+                $obj
             }
             catch {
                 [PSCustomObject]@{
-                    ComputerName = $computer
-                    Status = 'Failed'
-                    Error = $_.Exception.Message
+                    ComputerName   = $computer
+                    Status         = 'Failed'
+                    Error          = $_.Exception.Message
                     CollectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                 }
             }

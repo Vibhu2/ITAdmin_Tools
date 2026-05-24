@@ -1,12 +1,13 @@
 # ============================================================
 # FUNCTION : Get-VBServerInventory
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release (orchestrator rewrite)
+# VERSION  : 1.0.3
+# CHANGED  : 24-05-2026 -- Replaced Get-VBAzureADJoinStatusSimple with Get-VBAzureADJoinStatus (flat PSCustomObject output)
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Orchestrates full server inventory by calling all VB inventory functions
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.0.3 -- 24-05-2026 -- Replaced Get-VBAzureADJoinStatusSimple with Get-VBAzureADJoinStatus (flat PSCustomObject output)
 # v1.0.0 -- 10-04-2026 -- Initial release, replaces monolithic Get-ServerInventory
 # ============================================================
 #
@@ -90,9 +91,9 @@
     [PSCustomObject]: Section, ComputerName, Data (PSCustomObject array per section)
 
 .NOTES
-    Version  : 1.0.2
+    Version  : 1.0.3
     Author   : Vibhu Bhatnagar
-    Modified : 10-04-2026
+    Modified : 24-05-2026
     Category : Main / Orchestrator
 #>
 function Get-VBServerInventory {

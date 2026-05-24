@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBInactiveComputers
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 1.0.3
+# CHANGED  : 24-05-2026 -- Fixed AD filter: removed backtick escape on FileTime subexpression so threshold value is evaluated correctly
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Get Active Directory computers inactive for 90+ days
 # ENCODING : UTF-8 with BOM
@@ -54,7 +54,7 @@ function Get-VBInactiveComputers {
 
                 # Step 2 -- Build AD query parameters
                 $AdParams = @{
-                    Filter     = "enabled -eq `$true -and lastLogonTimestamp -lt `$($thresholdDate.FileTime)"
+                    Filter     = "enabled -eq `$true -and lastLogonTimestamp -lt $($thresholdDate.FileTime)"
                     Properties = 'lastLogonTimestamp', 'DNSHostName'
                 }
                 if ($computer -ne $env:COMPUTERNAME) {

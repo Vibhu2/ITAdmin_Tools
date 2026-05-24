@@ -1,6 +1,6 @@
 @{
     # -- Identity --
-    ModuleVersion     = '1.0.2'
+    ModuleVersion     = '1.0.3'
     GUID              = '88DE9814-273C-4FC8-852C-7B6D76D79338'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -26,7 +26,8 @@
             ProjectUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/tree/main/VB.ServerInventory'
             LicenseUri   = 'https://github.com/Vibhu2/ITAdmin_Tools/blob/main/LICENSE'
             HelpInfoUri  = 'https://pwsh.in/posts/'
-            ReleaseNotes = 'v1.0.2 -- 15-04-2026 -- Author standardised to Vibhu Bhatnagar across all 34 functions.
+            ReleaseNotes = 'v1.0.3 -- 24-05-2026 -- Fixed DiskInformation call in orchestrator: Get-VBDiskInformation → Get-VBDiskInventory.
+v1.0.2 -- 15-04-2026 -- Author standardised to Vibhu Bhatnagar across all 34 functions.
 v1.0.1 -- 10-04-2026 -- Initial release. 34 functions covering System, Disk, Network, AD, GPO, Security, Apps, Printing, Services, and Scheduled Tasks.'
         }
     }

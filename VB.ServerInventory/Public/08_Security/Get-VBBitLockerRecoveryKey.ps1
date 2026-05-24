@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBBitLockerRecoveryKey
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 1.0.3
+# CHANGED  : 24-05-2026 -- Added Get-BitLockerVolume availability check inside scriptBlock; returns clean Skipped result if BitLocker management tools not installed
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Retrieve BitLocker recovery keys from target computer
 # ENCODING : UTF-8 with BOM
@@ -69,14 +69,24 @@ function Get-VBBitLockerRecoveryKey {
                 $scriptBlock = {
                     param($mountPoint, $allDrives)
 
-                    # Step 1a -- Determine volumes to query
+                    # Step 1a -- Check BitLocker module is available
+                    if (-not (Get-Command -Name 'Get-BitLockerVolume' -ErrorAction SilentlyContinue)) {
+                        return [PSCustomObject]@{
+                            Drive       = 'N/A'
+                            Status      = 'Skipped'
+                            RecoveryKey = 'N/A'
+                            Error       = 'Get-BitLockerVolume not available -- BitLocker management tools not installed on this server.'
+                        }
+                    }
+
+                    # Step 1b -- Determine volumes to query
                     if ($allDrives -or [string]::IsNullOrEmpty($mountPoint)) {
                         $volumes = Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" }
                     } else {
                         $volumes = @($mountPoint)
                     }
 
-                    # Step 1b -- Process each volume
+                    # Step 1c -- Process each volume
                     foreach ($volume in $volumes) {
                         $bitLockerVol = Get-BitLockerVolume -MountPoint $volume -ErrorAction SilentlyContinue
 

@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBDhcpInfo
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- VB-compliant refactor and cleanup
+# VERSION  : 1.0.3
+# CHANGED  : 24-05-2026 -- Added DhcpServer module availability check; returns clean Skipped result if DHCP role/RSAT not installed
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Comprehensive DHCP server analysis and reporting
 # ENCODING : UTF-8 with BOM
@@ -59,7 +59,18 @@ function Get-VBDhcpInfo {
     process {
         foreach ($computer in $ComputerName) {
             try {
-                # Step 1 -- Build parameter hashtable
+                # Step 1 -- Check DhcpServer module is available before making any calls
+                if (-not (Get-Command -Name 'Get-DhcpServerv4Scope' -ErrorAction SilentlyContinue)) {
+                    return [PSCustomObject]@{
+                        ComputerName   = $computer
+                        ScanDateTime   = (Get-Date)
+                        Status         = 'Skipped'
+                        Error          = 'DhcpServer module not available -- DHCP role or RSAT-DHCP tools not installed on this server.'
+                        CollectionTime = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    }
+                }
+
+                # Step 2 -- Build parameter hashtable
                 $Params = @{
                     ComputerName = $computer
                     ErrorAction  = 'SilentlyContinue'
@@ -68,7 +79,7 @@ function Get-VBDhcpInfo {
                     $Params.Credential = $Credential
                 }
 
-                # Step 2 -- Collect IPv4 scope information
+                # Step 3 -- Collect IPv4 scope information
                 $IPv4Scopes = @(Get-DhcpServerv4Scope @Params)
                 $IPv4Options = Get-DhcpServerv4OptionValue @Params
 
@@ -92,7 +103,7 @@ function Get-VBDhcpInfo {
                     }
                 }
 
-                # Step 4 -- Collect IPv6 scope information
+                # Step 5 -- Collect IPv6 scope information
                 $IPv6Scopes = @(Get-DhcpServerv6Scope @Params)
                 $IPv6Options = if ($IPv6Scopes.Count -gt 0) {
                     Get-DhcpServerv6OptionValue @Params

@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBActiveDirectoryInfo
-# VERSION  : 1.0.2
-# CHANGED  : 10-04-2026 -- Initial VB-compliant release
+# VERSION  : 1.0.3
+# CHANGED  : 24-05-2026 -- Added SummaryProperties to return object for orchestrator display logic
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Collects comprehensive Active Directory information including domain controllers, servers, FSMO roles, users, and security status
 # ENCODING : UTF-8 with BOM
@@ -37,9 +37,9 @@
     TombstoneLifetime, TotalADUsers, ADRecyclebin, Status, CollectionTime
 
 .NOTES
-    Version  : 1.0.2
+    Version  : 1.0.3
     Author   : Vibhu Bhatnagar
-    Modified : 10-04-2026
+    Modified : 24-05-2026
     Category : AD / GPO
 #>
 
@@ -167,6 +167,13 @@ function Get-VBActiveDirectoryInfo {
                     ADRecyclebin          = $RecycleBinStatus
                     Status                = 'Success'
                     CollectionTime        = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    # SummaryProperties -- scalar fields shown on-screen by orchestrator display logic
+                    # Array/object properties (DomainControllers, AllServers, etc.) are expanded as sub-tables
+                    SummaryProperties     = @(
+                        'ComputerName', 'DomainFunctionalLevel', 'ForestFunctionalLevel',
+                        'TotalADUsers', 'ADRecyclebin', 'TombstoneLifetime',
+                        'RecycleBinEnabled', 'Status', 'CollectionTime'
+                    )
                 }
             } catch {
                 [PSCustomObject]@{

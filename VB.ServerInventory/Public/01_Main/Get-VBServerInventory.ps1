@@ -1,13 +1,13 @@
 # ============================================================
 # FUNCTION : Get-VBServerInventory
 # VERSION  : 1.0.4
-# CHANGED  : 24-05-2026 -- Fixed DiskInformation call: Get-VBDiskInformation → Get-VBDiskInventory (renamed in v1.1.0)
+# CHANGED  : 24-05-2026 -- Fixed DiskInformation call: Get-VBDiskInformation -> Get-VBDiskInventory (renamed in v1.1.0)
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Orchestrates full server inventory by calling all VB inventory functions
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
-# v1.0.4 -- 24-05-2026 -- Fixed DiskInformation call: Get-VBDiskInformation → Get-VBDiskInventory (renamed in v1.1.0)
+# v1.0.4 -- 24-05-2026 -- Fixed DiskInformation call: Get-VBDiskInformation -> Get-VBDiskInventory (renamed in v1.1.0)
 # v1.0.3 -- 24-05-2026 -- Replaced Get-VBAzureADJoinStatusSimple with Get-VBAzureADJoinStatus (flat PSCustomObject output)
 # v1.0.0 -- 10-04-2026 -- Initial release, replaces monolithic Get-ServerInventory
 # ============================================================

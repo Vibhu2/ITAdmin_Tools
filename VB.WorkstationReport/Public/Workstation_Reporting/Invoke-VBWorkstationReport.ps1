@@ -114,12 +114,12 @@ function Invoke-VBWorkstationReport {
         [switch]$SkipUpload
     )
 
-    $startTime      = Get-Date
+    $startTime = Get-Date
     $collectionTime = $startTime.ToString('dd-MM-yyyy HH:mm:ss')
-    $computerName   = $env:COMPUTERNAME
-    $DomainName     = $env:USERDOMAIN
-    $csvFiles       = [System.Collections.Generic.List[string]]::new()
-    $errors         = [System.Collections.Generic.List[string]]::new()
+    $computerName = $env:COMPUTERNAME
+    $DomainName = $env:USERDOMAIN
+    $csvFiles = [System.Collections.Generic.List[string]]::new()
+    $errors = [System.Collections.Generic.List[string]]::new()
 
     # -- Pre-flight: OutputPath must exist ------------------------------------------
     if (-not (Test-Path -Path $OutputPath -PathType Container)) {
@@ -146,11 +146,10 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting network interfaces..."
         try {
             Get-VBNetworkInterface |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("NI: $($_.Exception.Message)")
             Write-Warning "Network interface collection failed: $($_.Exception.Message)"
         }
@@ -160,11 +159,10 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting OneDrive folder backup status..."
         try {
             Get-VBOneDriveFolderBackupStatus |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("ODFB: $($_.Exception.Message)")
             Write-Warning "OneDrive folder backup collection failed: $($_.Exception.Message)"
         }
@@ -174,11 +172,10 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting Sync Center status..."
         try {
             Get-VBSyncCenterStatus |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("CNC: $($_.Exception.Message)")
             Write-Warning "Sync Center collection failed: $($_.Exception.Message)"
         }
@@ -188,11 +185,10 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting folder redirections..."
         try {
             Get-VBUserFolderRedirections -TableOutput |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("UFR: $($_.Exception.Message)")
             Write-Warning "Folder redirection collection failed: $($_.Exception.Message)"
         }
@@ -202,11 +198,10 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting printer mappings..."
         try {
             Get-VBUserPrinterMappings -TableOutput |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("UPM: $($_.Exception.Message)")
             Write-Warning "Printer mapping collection failed: $($_.Exception.Message)"
         }
@@ -216,11 +211,10 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting user profiles..."
         try {
             Get-VBUserProfile |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("UP: $($_.Exception.Message)")
             Write-Warning "User profile collection failed: $($_.Exception.Message)"
         }
@@ -230,75 +224,81 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting user shell folders..."
         try {
             Get-VBUserShellFolders |
-                Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
-        }
-        catch {
+        } catch {
             $errors.Add("USF: $($_.Exception.Message)")
             Write-Warning "User shell folder collection failed: $($_.Exception.Message)"
         }
+        # -- Report 8 DsRegStatus -------------------------------------------------------------
 
-        # -- Upload -------------------------------------------------------------------
-        $uploadResults = @()
-        if (-not $SkipUpload) {
-            # Validate OutputPath still exists and has CSVs before attempting upload
-            if (-not (Test-Path -Path $OutputPath -PathType Container)) {
-                $msg = "Upload skipped: OutputPath '$OutputPath' no longer exists."
-                $errors.Add($msg)
-                Write-Warning $msg
-            }
-            elseif ($csvFiles.Count -eq 0) {
-                $msg = "Upload skipped: no CSV files were generated in '$OutputPath'."
-                $errors.Add($msg)
-                Write-Warning $msg
-            }
-            else {
-                Write-Verbose "Uploading $($csvFiles.Count) file(s) to $NextcloudBaseUrl/$NextcloudDestination"
-                $uploadResults = $csvFiles |
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_DsRegStatus.csv"
+        Write-Verbose "Collecting user Device Azure Joined Status..."
+        try {
+            Get-DSRegStatus | Select-Object DeviceName, AzureAdJoined, TenantName, TenantId, DomainJoined,WorkplaceTenantName,TpmProtected |
+            Export-Csv -Path (Join-Path $OutputPath "${computerName}_${DomainName}_DSRegStatus.csv") -NoTypeInformation -Force
+        } catch {
+            $errors.Add("DsRegStatus: $($_.Exception.Message)")
+            Write-Warning "User Device Azure Joined Status collection failed: $($_.Exception.Message)"
+        }
+
+            # -- Upload -------------------------------------------------------------------
+            $uploadResults = @()
+            if (-not $SkipUpload) {
+                # Validate OutputPath still exists and has CSVs before attempting upload
+                if (-not (Test-Path -Path $OutputPath -PathType Container)) {
+                    $msg = "Upload skipped: OutputPath '$OutputPath' no longer exists."
+                    $errors.Add($msg)
+                    Write-Warning $msg
+                } elseif ($csvFiles.Count -eq 0) {
+                    $msg = "Upload skipped: no CSV files were generated in '$OutputPath'."
+                    $errors.Add($msg)
+                    Write-Warning $msg
+                } else {
+                    Write-Verbose "Uploading $($csvFiles.Count) file(s) to $NextcloudBaseUrl/$NextcloudDestination"
+                    $uploadResults = $csvFiles |
                     Set-VBNextcloudFile -BaseUrl $NextcloudBaseUrl `
                         -Credential $Credential -DestinationPath $NextcloudDestination -Overwrite
 
-                $failedUploads = @($uploadResults | Where-Object { $_.Status -eq 'Failed' })
-                if ($failedUploads.Count -gt 0) {
-                    $failedUploads | ForEach-Object {
-                        $errors.Add("Upload failed for $($_.SourceFile): $($_.Error)")
-                        Write-Warning "Upload failed: $($_.SourceFile) -- $($_.Error)"
+                    $failedUploads = @($uploadResults | Where-Object { $_.Status -eq 'Failed' })
+                    if ($failedUploads.Count -gt 0) {
+                        $failedUploads | ForEach-Object {
+                            $errors.Add("Upload failed for $($_.SourceFile): $($_.Error)")
+                            Write-Warning "Upload failed: $($_.SourceFile) -- $($_.Error)"
+                        }
                     }
                 }
+            } else {
+                Write-Verbose 'Upload skipped (-SkipUpload specified).'
+            }
+
+            $duration = (Get-Date) - $startTime
+            $statusCode = if ($errors.Count -eq 0) { 'Success' }
+            elseif ($csvFiles.Count -gt 0) { 'PartialFailure' }
+            else { 'Failed' }
+
+            [PSCustomObject]@{
+                ComputerName     = $computerName
+                OutputPath       = $OutputPath
+                ReportsGenerated = $csvFiles.Count
+                UploadResults    = $uploadResults
+                Errors           = if ($errors.Count) { $errors -join '; ' } else { $null }
+                Duration         = '{0:mm\:ss\.fff}' -f $duration
+                Status           = $statusCode
+                CollectionTime   = $collectionTime
+            }
+        } catch {
+            Write-Error -Message "Invoke-VBWorkstationReport failed: $($_.Exception.Message)"
+            [PSCustomObject]@{
+                ComputerName     = $computerName
+                OutputPath       = $OutputPath
+                ReportsGenerated = $csvFiles.Count
+                UploadResults    = @()
+                Errors           = $_.Exception.Message
+                Duration         = '{0:mm\:ss\.fff}' -f ((Get-Date) - $startTime)
+                Status           = 'Failed'
+                CollectionTime   = $collectionTime
             }
         }
-        else {
-            Write-Verbose 'Upload skipped (-SkipUpload specified).'
-        }
-
-        $duration   = (Get-Date) - $startTime
-        $statusCode = if ($errors.Count -eq 0) { 'Success' }
-                      elseif ($csvFiles.Count -gt 0) { 'PartialFailure' }
-                      else { 'Failed' }
-
-        [PSCustomObject]@{
-            ComputerName     = $computerName
-            OutputPath       = $OutputPath
-            ReportsGenerated = $csvFiles.Count
-            UploadResults    = $uploadResults
-            Errors           = if ($errors.Count) { $errors -join '; ' } else { $null }
-            Duration         = '{0:mm\:ss\.fff}' -f $duration
-            Status           = $statusCode
-            CollectionTime   = $collectionTime
-        }
     }
-    catch {
-        Write-Error -Message "Invoke-VBWorkstationReport failed: $($_.Exception.Message)"
-        [PSCustomObject]@{
-            ComputerName     = $computerName
-            OutputPath       = $OutputPath
-            ReportsGenerated = $csvFiles.Count
-            UploadResults    = @()
-            Errors           = $_.Exception.Message
-            Duration         = '{0:mm\:ss\.fff}' -f ((Get-Date) - $startTime)
-            Status           = 'Failed'
-            CollectionTime   = $collectionTime
-        }
-    }
-}

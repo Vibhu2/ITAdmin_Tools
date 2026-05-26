@@ -1,0 +1,607 @@
+{
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.AdminTools\\Tools\\Get-VBPendingReboot.ps1": {
+    "mtime": 1777376072.7064047,
+    "ast_hash": "b53ddfe8fdb0b1fd197fc4a69049654b",
+    "semantic_hash": "b53ddfe8fdb0b1fd197fc4a69049654b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Invoke-VBDNSEnrichmentTestRun.ps1": {
+    "mtime": 1779186726.753121,
+    "ast_hash": "3d2604bf5114f73002253ed775e89671",
+    "semantic_hash": "3d2604bf5114f73002253ed775e89671"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\ConvertFrom-VBSqliteEnrichmentRow.ps1": {
+    "mtime": 1778558027.6305304,
+    "ast_hash": "b6ba7b0e38387aac875882b5a934a9d8",
+    "semantic_hash": "b6ba7b0e38387aac875882b5a934a9d8"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\ConvertTo-VBNormalisedMAC.ps1": {
+    "mtime": 1778468994.4044974,
+    "ast_hash": "4b2384a53e0999fdb123f42554088c48",
+    "semantic_hash": "4b2384a53e0999fdb123f42554088c48"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Format-VBEnrichmentContext.ps1": {
+    "mtime": 1778558020.6622765,
+    "ast_hash": "4c08fe7f54c3dc8b44e4c35f024a85ab",
+    "semantic_hash": "4c08fe7f54c3dc8b44e4c35f024a85ab"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Get-VBARPTable.ps1": {
+    "mtime": 1778557723.3168638,
+    "ast_hash": "8ca1af2f0097d2868af586fdd7746542",
+    "semantic_hash": "8ca1af2f0097d2868af586fdd7746542"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Invoke-VBLoadOUITable.ps1": {
+    "mtime": 1778558000.0717113,
+    "ast_hash": "89a21896a494c7a08e269a18176a5d9b",
+    "semantic_hash": "89a21896a494c7a08e269a18176a5d9b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Invoke-VBmDNSBrowse.ps1": {
+    "mtime": 1778557902.0441568,
+    "ast_hash": "02c3442cb0f29ca6e06374265fe5f29a",
+    "semantic_hash": "02c3442cb0f29ca6e06374265fe5f29a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Invoke-VBSqliteCommand.ps1": {
+    "mtime": 1778558117.5960107,
+    "ast_hash": "1525aeebd55a4716f7f300685e516cbe",
+    "semantic_hash": "1525aeebd55a4716f7f300685e516cbe"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Invoke-VBSwitchSNMPWalk.ps1": {
+    "mtime": 1778557940.2493334,
+    "ast_hash": "1e7b09714fb5cb2d6005c9e722ba729b",
+    "semantic_hash": "1e7b09714fb5cb2d6005c9e722ba729b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\New-VBLayerResult.ps1": {
+    "mtime": 1778557636.7270637,
+    "ast_hash": "74e777f2be17acabd67195f9d9acf094",
+    "semantic_hash": "74e777f2be17acabd67195f9d9acf094"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Test-VBPrivateIP.ps1": {
+    "mtime": 1778468994.4128065,
+    "ast_hash": "b3a4c41fc717a3ec3e9e7d57292dbe40",
+    "semantic_hash": "b3a4c41fc717a3ec3e9e7d57292dbe40"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Private\\Write-VBEnrichmentProgress.ps1": {
+    "mtime": 1778468994.4151711,
+    "ast_hash": "bfe683b5912f9a205ad5aaa91d17a92f",
+    "semantic_hash": "bfe683b5912f9a205ad5aaa91d17a92f"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Export-VBEnrichmentResult.ps1": {
+    "mtime": 1778472956.2295856,
+    "ast_hash": "011e244ea577dcab82cbed8eae6538d0",
+    "semantic_hash": "011e244ea577dcab82cbed8eae6538d0"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBADComputer.ps1": {
+    "mtime": 1778558193.9011893,
+    "ast_hash": "ab841a2e6a846750913720654eb01cfa",
+    "semantic_hash": "ab841a2e6a846750913720654eb01cfa"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBARPEntry.ps1": {
+    "mtime": 1778558164.1843352,
+    "ast_hash": "a780d297d7a016d7373b729ca073eab0",
+    "semantic_hash": "a780d297d7a016d7373b729ca073eab0"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBDHCPLease.ps1": {
+    "mtime": 1778558195.647927,
+    "ast_hash": "e2ad69b53946078c5a9309b2eca4c832",
+    "semantic_hash": "e2ad69b53946078c5a9309b2eca4c832"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBEnrichmentContext.ps1": {
+    "mtime": 1778558224.7628443,
+    "ast_hash": "5b961fd9398d8884184f0ced2947fe8f",
+    "semantic_hash": "5b961fd9398d8884184f0ced2947fe8f"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBEnrichmentResult.ps1": {
+    "mtime": 1778558098.998763,
+    "ast_hash": "737c179959123d384159c00308cc1164",
+    "semantic_hash": "737c179959123d384159c00308cc1164"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBHTTPBanner.ps1": {
+    "mtime": 1778558200.9355593,
+    "ast_hash": "3b475cf9ab9019af28ded247dc17bdeb",
+    "semantic_hash": "3b475cf9ab9019af28ded247dc17bdeb"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBmDNSRecord.ps1": {
+    "mtime": 1778558160.57649,
+    "ast_hash": "64363a918ee26dea1fee01f764964997",
+    "semantic_hash": "64363a918ee26dea1fee01f764964997"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBOUIVendor.ps1": {
+    "mtime": 1778558047.7340338,
+    "ast_hash": "c6ee22c17c32300ae3441b4611741c57",
+    "semantic_hash": "c6ee22c17c32300ae3441b4611741c57"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBPTRRecord.ps1": {
+    "mtime": 1778558199.1165028,
+    "ast_hash": "0ef29b9fc3791ab2f3ca1206a7579d48",
+    "semantic_hash": "0ef29b9fc3791ab2f3ca1206a7579d48"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBRTSPBanner.ps1": {
+    "mtime": 1778558197.4281154,
+    "ast_hash": "70d6854516a679d98ac6be3fcac9d909",
+    "semantic_hash": "70d6854516a679d98ac6be3fcac9d909"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBSNMPIdentity.ps1": {
+    "mtime": 1778558231.5533648,
+    "ast_hash": "49d128bf58627e524fb41d04c9df4f33",
+    "semantic_hash": "49d128bf58627e524fb41d04c9df4f33"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBSwitchARP.ps1": {
+    "mtime": 1778558241.0294304,
+    "ast_hash": "d779b13efc98016b3b212c4fd304c63a",
+    "semantic_hash": "d779b13efc98016b3b212c4fd304c63a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Get-VBTCPFingerprint.ps1": {
+    "mtime": 1778558192.0571687,
+    "ast_hash": "0c78053c41602dfff904333014c52b37",
+    "semantic_hash": "0c78053c41602dfff904333014c52b37"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Initialize-VBEnrichmentDatabase.ps1": {
+    "mtime": 1778558130.9326556,
+    "ast_hash": "0bb3a7f206631a0f5616532858d82613",
+    "semantic_hash": "0bb3a7f206631a0f5616532858d82613"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Invoke-VBIPEnrichment.ps1": {
+    "mtime": 1778558259.4193938,
+    "ast_hash": "6553e32a60b6a34aaa5378531bb96849",
+    "semantic_hash": "6553e32a60b6a34aaa5378531bb96849"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Public\\Resolve-VBDeviceClass.ps1": {
+    "mtime": 1778557711.4104137,
+    "ast_hash": "dc0ca054d46517a5724ef951aa3a2c5b",
+    "semantic_hash": "dc0ca054d46517a5724ef951aa3a2c5b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Sql\\001_init.sql": {
+    "mtime": 1778468994.4239814,
+    "ast_hash": "d93a8f4ca7b992ae0218e0a36f1033e3",
+    "semantic_hash": "d93a8f4ca7b992ae0218e0a36f1033e3"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.NextCloud\\Private\\New-VBNextcloudFolder.ps1": {
+    "mtime": 1776254045.8233984,
+    "ast_hash": "5b7f6bfcd42ad68e939c23de11198f6c",
+    "semantic_hash": "5b7f6bfcd42ad68e939c23de11198f6c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.NextCloud\\Public\\Get-VBNextcloudFiles.ps1": {
+    "mtime": 1776254045.5053651,
+    "ast_hash": "c0e32eee7ed380408d3098282b8be856",
+    "semantic_hash": "c0e32eee7ed380408d3098282b8be856"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.NextCloud\\Public\\Get-VBNextcloudFolders.ps1": {
+    "mtime": 1776254345.2684379,
+    "ast_hash": "4991239f46c993a1eaac9de903af3deb",
+    "semantic_hash": "4991239f46c993a1eaac9de903af3deb"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.NextCloud\\Public\\Set-VBNextcloudFile.ps1": {
+    "mtime": 1776254045.6084156,
+    "ast_hash": "181c676fe7e1929e0052e568b5115c5e",
+    "semantic_hash": "181c676fe7e1929e0052e568b5115c5e"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.NextCloud\\Public\\Start-VBNextcloudUpload.ps1": {
+    "mtime": 1776254045.7202518,
+    "ast_hash": "060890ae5be8a426ea8fb26d5315ce48",
+    "semantic_hash": "060890ae5be8a426ea8fb26d5315ce48"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\01_Main\\Get-VBServerInventory.ps1": {
+    "mtime": 1779618644.1773233,
+    "ast_hash": "bd926e8e744bd52e07c0103b274297d6",
+    "semantic_hash": "bd926e8e744bd52e07c0103b274297d6"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\02_System_Hardware\\Get-VBDiskInventory.ps1": {
+    "mtime": 1777652851.5535488,
+    "ast_hash": "d99660f8ae05825e32f22a4d1cc10c78",
+    "semantic_hash": "d99660f8ae05825e32f22a4d1cc10c78"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\02_System_Hardware\\Get-VBNetworkInformation.ps1": {
+    "mtime": 1776330016.1791584,
+    "ast_hash": "c2e86c7642c5b0483575c680aa320105",
+    "semantic_hash": "c2e86c7642c5b0483575c680aa320105"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\02_System_Hardware\\Get-VBSystemInfo.ps1": {
+    "mtime": 1776327721.1072514,
+    "ast_hash": "afdc79d621072c34b85026878dabf6d1",
+    "semantic_hash": "afdc79d621072c34b85026878dabf6d1"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\03_Services\\Get-VBDhcpInfo.ps1": {
+    "mtime": 1779619199.1452777,
+    "ast_hash": "121c040d8a2a2fa800788b1137638319",
+    "semantic_hash": "121c040d8a2a2fa800788b1137638319"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\03_Services\\Get-VBDHCPInformation.ps1": {
+    "mtime": 1776227033.882596,
+    "ast_hash": "b4011704448072217fb121ef3485ec51",
+    "semantic_hash": "b4011704448072217fb121ef3485ec51"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\03_Services\\Get-VBDNSServerInfo.ps1": {
+    "mtime": 1776227033.948167,
+    "ast_hash": "c6541e39777c9571e43f4c4550024c3c",
+    "semantic_hash": "c6541e39777c9571e43f4c4550024c3c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\03_Services\\Get-VBRDSUserInformation.ps1": {
+    "mtime": 1776227034.0039773,
+    "ast_hash": "72c5faaa45d78d373afe01140a21a110",
+    "semantic_hash": "72c5faaa45d78d373afe01140a21a110"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\04_AD_GPO\\Get-VBActiveDirectoryInfo.ps1": {
+    "mtime": 1779620479.8452916,
+    "ast_hash": "f9fc58bd6d68585d44c7951f6c0f2db2",
+    "semantic_hash": "f9fc58bd6d68585d44c7951f6c0f2db2"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\04_AD_GPO\\Get-VBGPOComprehensiveReport.ps1": {
+    "mtime": 1776227034.1158621,
+    "ast_hash": "f900d893b0274d83bea7bb86b78bf352",
+    "semantic_hash": "f900d893b0274d83bea7bb86b78bf352"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\04_AD_GPO\\Get-VBGpoConnections.ps1": {
+    "mtime": 1776227034.1710804,
+    "ast_hash": "01d73fe9a4e8e3b47b30f8d62a1c9dc7",
+    "semantic_hash": "01d73fe9a4e8e3b47b30f8d62a1c9dc7"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\04_AD_GPO\\Get-VBGPOInformation.ps1": {
+    "mtime": 1776227034.2290628,
+    "ast_hash": "5d6ba4138235cded3270741c677ae8d7",
+    "semantic_hash": "5d6ba4138235cded3270741c677ae8d7"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\04_AD_GPO\\Get-VBUnusedGPOs.ps1": {
+    "mtime": 1776227034.2849312,
+    "ast_hash": "0f4cd3043ded9f1fdd8b69d64398b66c",
+    "semantic_hash": "0f4cd3043ded9f1fdd8b69d64398b66c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBAdAccountWithNoLogin.ps1": {
+    "mtime": 1776227034.3396647,
+    "ast_hash": "001c72f205a031cec9d71ae4682aa239",
+    "semantic_hash": "001c72f205a031cec9d71ae4682aa239"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBADGroupsWithMemberCount.ps1": {
+    "mtime": 1776227034.396786,
+    "ast_hash": "0b259e6a05fe90f60510e497ff11f639",
+    "semantic_hash": "0b259e6a05fe90f60510e497ff11f639"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBEmptyADGroups.ps1": {
+    "mtime": 1776227034.4536781,
+    "ast_hash": "c4a730e8e966ffc6c94db52964af125d",
+    "semantic_hash": "c4a730e8e966ffc6c94db52964af125d"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBInactiveComputers.ps1": {
+    "mtime": 1779619182.5521166,
+    "ast_hash": "4463ff67007971b72ce649c595b93b40",
+    "semantic_hash": "4463ff67007971b72ce649c595b93b40"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBInactiveUsers.ps1": {
+    "mtime": 1776227034.5705554,
+    "ast_hash": "f46b16b773cdbd2b8df14f0707990f1d",
+    "semantic_hash": "f46b16b773cdbd2b8df14f0707990f1d"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBNoPasswordRequiredUsers.ps1": {
+    "mtime": 1776227034.6279776,
+    "ast_hash": "7b5a7152618471b6b06327546bae859c",
+    "semantic_hash": "7b5a7152618471b6b06327546bae859c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBOldAdminPasswords.ps1": {
+    "mtime": 1776227034.6878211,
+    "ast_hash": "0ccc1e6703c5af89fd5a8371e692814e",
+    "semantic_hash": "0ccc1e6703c5af89fd5a8371e692814e"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\05_AD_User_Health\\Get-VBPasswordNeverExpiresUsers.ps1": {
+    "mtime": 1776227034.7492716,
+    "ast_hash": "3361571076b3cb439cf6ad502a3b99a6",
+    "semantic_hash": "3361571076b3cb439cf6ad502a3b99a6"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\06_Apps_Features\\Get-VBInstalledApplications.ps1": {
+    "mtime": 1776227034.8136647,
+    "ast_hash": "1dcafb8131311ced72d6b7eb0e04d68c",
+    "semantic_hash": "1dcafb8131311ced72d6b7eb0e04d68c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\06_Apps_Features\\Get-VBWindowsFeaturesInfo.ps1": {
+    "mtime": 1776227034.8756216,
+    "ast_hash": "bfd9d2d702df4ea8ed550e7c6745b239",
+    "semantic_hash": "bfd9d2d702df4ea8ed550e7c6745b239"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\06_Apps_Features\\Get-VBWindowsStoreApps.ps1": {
+    "mtime": 1776227034.936622,
+    "ast_hash": "bd76d7c676cdda2ca8c6eb306ef2f928",
+    "semantic_hash": "bd76d7c676cdda2ca8c6eb306ef2f928"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\06_Apps_Features\\Get-VBWindowsUpdateInfo.ps1": {
+    "mtime": 1776227035.0113533,
+    "ast_hash": "1d7a1184fd19ad4b1ff16ae701e26de7",
+    "semantic_hash": "1d7a1184fd19ad4b1ff16ae701e26de7"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\07_Printing_Shares\\Get-VBPrinterInformation.ps1": {
+    "mtime": 1776227035.106395,
+    "ast_hash": "ff37a63c7116a4b42f3ad121154fc3e9",
+    "semantic_hash": "ff37a63c7116a4b42f3ad121154fc3e9"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\07_Printing_Shares\\Get-VBPrintPrintingInfo.ps1": {
+    "mtime": 1776227035.1760387,
+    "ast_hash": "940300aa1f1d57c94bcc2b1f02145263",
+    "semantic_hash": "940300aa1f1d57c94bcc2b1f02145263"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\07_Printing_Shares\\Get-VBPrintServerInventory.ps1": {
+    "mtime": 1778562095.1059215,
+    "ast_hash": "0ab8369c65bc742556758b4c4c95958c",
+    "semantic_hash": "0ab8369c65bc742556758b4c4c95958c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\07_Printing_Shares\\Get-VBShareInformation.ps1": {
+    "mtime": 1776331544.8325205,
+    "ast_hash": "8117258e883793148f6a0727b21f2e9f",
+    "semantic_hash": "8117258e883793148f6a0727b21f2e9f"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\08_Security\\Get-VBAzureADJoinStatus.ps1": {
+    "mtime": 1779603979.8599703,
+    "ast_hash": "fc3c80e8d0c7cc1a385f20fabfccbf5c",
+    "semantic_hash": "fc3c80e8d0c7cc1a385f20fabfccbf5c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\08_Security\\Get-VBBitLockerRecoveryKey.ps1": {
+    "mtime": 1779619213.183663,
+    "ast_hash": "5d7e02c77c6eb1465ae27ea2f8de4531",
+    "semantic_hash": "5d7e02c77c6eb1465ae27ea2f8de4531"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\08_Security\\Get-VBFirewallPortRules.ps1": {
+    "mtime": 1776227035.4777381,
+    "ast_hash": "ea4d3313508fe4bd55272260925f94f8",
+    "semantic_hash": "ea4d3313508fe4bd55272260925f94f8"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\09_Scheduled_Tasks\\Get-VBNonMicrosoftScheduledTasks.ps1": {
+    "mtime": 1776227035.5379887,
+    "ast_hash": "892f75c25cce57cb26ac95f144e0b1cc",
+    "semantic_hash": "892f75c25cce57cb26ac95f144e0b1cc"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\10_Utility\\Write-VBSectionHeader.ps1": {
+    "mtime": 1776227035.595545,
+    "ast_hash": "7bc87a58a60f3e0cd67793d7227e985d",
+    "semantic_hash": "7bc87a58a60f3e0cd67793d7227e985d"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Public\\Formatting_Output\\Format-VBSysteminfo.ps1": {
+    "mtime": 1778562062.0023787,
+    "ast_hash": "fd4cab793bd68bc906677340caf25074",
+    "semantic_hash": "fd4cab793bd68bc906677340caf25074"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Server_invetory_Fix\\Step5_ReportOutput.ps1": {
+    "mtime": 1779617357.4494464,
+    "ast_hash": "8b406184c8f47e2f316be3b9e8136988",
+    "semantic_hash": "8b406184c8f47e2f316be3b9e8136988"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Private\\ConvertFrom-VBDNSName.ps1": {
+    "mtime": 1778134316.2770894,
+    "ast_hash": "f9f6d37c2dea9d9db4b2f6c55404734a",
+    "semantic_hash": "f9f6d37c2dea9d9db4b2f6c55404734a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Private\\Get-VBImportStatus.ps1": {
+    "mtime": 1778134353.8588984,
+    "ast_hash": "06c6d1ce8ec1df1cb32ee186bc2f7816",
+    "semantic_hash": "06c6d1ce8ec1df1cb32ee186bc2f7816"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Private\\Invoke-VBBulkInsert.ps1": {
+    "mtime": 1778149913.6790667,
+    "ast_hash": "f4ca7af7c0a332ebb2162c5766cadb9e",
+    "semantic_hash": "f4ca7af7c0a332ebb2162c5766cadb9e"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Private\\Invoke-VBDNSLogParser.ps1": {
+    "mtime": 1778149881.8545327,
+    "ast_hash": "701038e6dd37f7e3568b54dad463177e",
+    "semantic_hash": "701038e6dd37f7e3568b54dad463177e"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Private\\Test-VBPrivateIP.ps1": {
+    "mtime": 1778134340.439888,
+    "ast_hash": "44d9b36ff51fea3160a306b9ce2f7097",
+    "semantic_hash": "44d9b36ff51fea3160a306b9ce2f7097"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Public\\Export-VBDNSLogReport.ps1": {
+    "mtime": 1778134594.2961943,
+    "ast_hash": "749323e12200086f13a46db8f80c833a",
+    "semantic_hash": "749323e12200086f13a46db8f80c833a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Public\\Get-VBDNSLog.ps1": {
+    "mtime": 1778134525.5110164,
+    "ast_hash": "f6ea109a4c3e72965bcdec2882670c81",
+    "semantic_hash": "f6ea109a4c3e72965bcdec2882670c81"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Public\\Get-VBDNSLogStatistics.ps1": {
+    "mtime": 1778145037.8664525,
+    "ast_hash": "b87854b5b79b89262a882699c983d13c",
+    "semantic_hash": "b87854b5b79b89262a882699c983d13c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Public\\Import-VBDNSLog.ps1": {
+    "mtime": 1778149983.4832115,
+    "ast_hash": "582535505777bebef62d0a2802ceb17a",
+    "semantic_hash": "582535505777bebef62d0a2802ceb17a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Public\\Initialize-VBDNSLogDatabase.ps1": {
+    "mtime": 1778135465.2912443,
+    "ast_hash": "17057b9df3498597ced0cad34bee2079",
+    "semantic_hash": "17057b9df3498597ced0cad34bee2079"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Public\\Invoke-VBDNSLogQuery.ps1": {
+    "mtime": 1778134543.0600188,
+    "ast_hash": "f5ffd9e609e4a4ac8be91256961cf38b",
+    "semantic_hash": "f5ffd9e609e4a4ac8be91256961cf38b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Private\\Dismount-VBUserHive.ps1": {
+    "mtime": 1778583975.6646702,
+    "ast_hash": "47b0c050f60ddc2ac111bf9e32f73286",
+    "semantic_hash": "47b0c050f60ddc2ac111bf9e32f73286"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Private\\Mount-VBUserHive.ps1": {
+    "mtime": 1778583975.666675,
+    "ast_hash": "990ce2d8514ca93b5f853e5fbb6e92c0",
+    "semantic_hash": "990ce2d8514ca93b5f853e5fbb6e92c0"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Private\\Update-VBUserPrinterRegistry.ps1": {
+    "mtime": 1776958152.142716,
+    "ast_hash": "3140014455d1fd3b99835125523b3b04",
+    "semantic_hash": "3140014455d1fd3b99835125523b3b04"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Private\\VB-CSVReportGenerationScript.ps1": {
+    "mtime": 1778561759.6520092,
+    "ast_hash": "b0c4f995d49149fa3842f0135532c3ed",
+    "semantic_hash": "b0c4f995d49149fa3842f0135532c3ed"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Printer_Management\\Add-VBUserPrinter.ps1": {
+    "mtime": 1778583975.8018878,
+    "ast_hash": "c790374134b06e5c010d9879688437b0",
+    "semantic_hash": "c790374134b06e5c010d9879688437b0"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Printer_Management\\Get-VBUserPrinterMappings.ps1": {
+    "mtime": 1777306128.4996126,
+    "ast_hash": "83de264aeabd629fbbc50b3be53f926c",
+    "semantic_hash": "83de264aeabd629fbbc50b3be53f926c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Printer_Management\\Set-VBUserPrinterMigration.ps1": {
+    "mtime": 1777890629.2426736,
+    "ast_hash": "bf74d2518c81b2b4c8cdf441db31dbc4",
+    "semantic_hash": "bf74d2518c81b2b4c8cdf441db31dbc4"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Fixes\\Repair-VBUserShellFolderRedirects.ps1": {
+    "mtime": 1779274777.695693,
+    "ast_hash": "63704e1ffdedda74b16c98de8a92b10a",
+    "semantic_hash": "63704e1ffdedda74b16c98de8a92b10a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-DSRegstatus.ps1": {
+    "mtime": 1779604194.0323117,
+    "ast_hash": "81a23ac88d5dd1254cc5fdc28fc10181",
+    "semantic_hash": "81a23ac88d5dd1254cc5fdc28fc10181"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBDiskInventory.ps1": {
+    "mtime": 1777652851.5535488,
+    "ast_hash": "d99660f8ae05825e32f22a4d1cc10c78",
+    "semantic_hash": "d99660f8ae05825e32f22a4d1cc10c78"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBNetworkInterface.ps1": {
+    "mtime": 1776319112.2562475,
+    "ast_hash": "4fa584bd73e654fbf1696cd14aa32f60",
+    "semantic_hash": "4fa584bd73e654fbf1696cd14aa32f60"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBOneDriveFolderBackupStatus.ps1": {
+    "mtime": 1776319121.1753607,
+    "ast_hash": "8671eb17ec2e736cf818aac3ab63ba0c",
+    "semantic_hash": "8671eb17ec2e736cf818aac3ab63ba0c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBSyncCenterStatus.ps1": {
+    "mtime": 1776319129.802726,
+    "ast_hash": "df980728cf0b6f82ae38f804753622ee",
+    "semantic_hash": "df980728cf0b6f82ae38f804753622ee"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBUserFolderRedirections.ps1": {
+    "mtime": 1776319139.737147,
+    "ast_hash": "5fce3d785874653102d3743f67a20b2b",
+    "semantic_hash": "5fce3d785874653102d3743f67a20b2b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBUserProfile.ps1": {
+    "mtime": 1776319166.0351582,
+    "ast_hash": "efaa599fd2173e11511a2b39f0d421d2",
+    "semantic_hash": "efaa599fd2173e11511a2b39f0d421d2"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Get-VBUserShellFolders.ps1": {
+    "mtime": 1776319179.3469975,
+    "ast_hash": "e22f270efe40680e2e04e56f91c86aa7",
+    "semantic_hash": "e22f270efe40680e2e04e56f91c86aa7"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Invoke-VBasCurrentUser.ps1": {
+    "mtime": 1776965234.1856637,
+    "ast_hash": "2296aed9d504b2d93b240d858650a24c",
+    "semantic_hash": "2296aed9d504b2d93b240d858650a24c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Workstation_Reporting\\Invoke-VBWorkstationReport.ps1": {
+    "mtime": 1779603025.0745957,
+    "ast_hash": "6a503e122dcd57d9659acde37bb3bbe5",
+    "semantic_hash": "6a503e122dcd57d9659acde37bb3bbe5"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\CODE_OF_CONDUCT.md": {
+    "mtime": 1776854654.963553,
+    "ast_hash": "accd4a5367b6329b39af45b500ee05d7",
+    "semantic_hash": "accd4a5367b6329b39af45b500ee05d7"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\CONTRIBUTING.md": {
+    "mtime": 1776854654.9645536,
+    "ast_hash": "03590954dcf7d751ed69193cc88b859b",
+    "semantic_hash": "03590954dcf7d751ed69193cc88b859b"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\README.md": {
+    "mtime": 1776146235.227198,
+    "ast_hash": "10e168695f304e3f881ac3662103d9f4",
+    "semantic_hash": "10e168695f304e3f881ac3662103d9f4"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\.github\\ISSUE_TEMPLATE\\bug_report.md": {
+    "mtime": 1776854654.9595509,
+    "ast_hash": "1b9a38e844edbbe46d19f6afef8eaab6",
+    "semantic_hash": "1b9a38e844edbbe46d19f6afef8eaab6"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\.github\\ISSUE_TEMPLATE\\feature_request.md": {
+    "mtime": 1776854654.961576,
+    "ast_hash": "a4bb642678764381e7859fb406197c38",
+    "semantic_hash": "a4bb642678764381e7859fb406197c38"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\.github\\workflows\\publish-modules.yml": {
+    "mtime": 1779189940.2023015,
+    "ast_hash": "5f769361c5f98c5dc571050eae480e5a",
+    "semantic_hash": "5f769361c5f98c5dc571050eae480e5a"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.AdminTools\\README.md": {
+    "mtime": 1777571323.1705382,
+    "ast_hash": "757e0d6f5429eabadad2bcb6735efb18",
+    "semantic_hash": "757e0d6f5429eabadad2bcb6735efb18"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\CLAUDE.md": {
+    "mtime": 1778500917.9583406,
+    "ast_hash": "7816b4ab2799ccddfaf9dd04f6fd376d",
+    "semantic_hash": "7816b4ab2799ccddfaf9dd04f6fd376d"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\README.md": {
+    "mtime": 1779187980.8102021,
+    "ast_hash": "792cbcfc6d6f594999ed083673ff853e",
+    "semantic_hash": "792cbcfc6d6f594999ed083673ff853e"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Documentation\\dnsenrichment-module-design-v2.md": {
+    "mtime": 1778246083.2866848,
+    "ast_hash": "fc832a5eb1f5c99b8350a010c2ff16a0",
+    "semantic_hash": "fc832a5eb1f5c99b8350a010c2ff16a0"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.DNSEnrichment\\Documentation\\vb-dnsenrichment-developer-Audit-todo.md": {
+    "mtime": 1778556255.9261734,
+    "ast_hash": "063cc465ce3c94f0b0a63b7e7c5d6c94",
+    "semantic_hash": "063cc465ce3c94f0b0a63b7e7c5d6c94"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.NextCloud\\README.md": {
+    "mtime": 1777638283.4443505,
+    "ast_hash": "4618ccceb3623aec8bb318e4a9a5e3e5",
+    "semantic_hash": "4618ccceb3623aec8bb318e4a9a5e3e5"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\README.md": {
+    "mtime": 1777644583.761133,
+    "ast_hash": "4ee89c96fdd25d43f72c4a0a88b63988",
+    "semantic_hash": "4ee89c96fdd25d43f72c4a0a88b63988"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.ServerInventory\\Publishing PS Module from Github\\publish-to-psgallery.yml": {
+    "mtime": 1776156538.2382221,
+    "ast_hash": "837bc904b8ccf6b13761c92c9660e4b4",
+    "semantic_hash": "837bc904b8ccf6b13761c92c9660e4b4"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\README.md": {
+    "mtime": 1778148864.8084059,
+    "ast_hash": "bd1509e4537d00331aab12cb66ce2677",
+    "semantic_hash": "bd1509e4537d00331aab12cb66ce2677"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Documentation\\Module_Design.md": {
+    "mtime": 1778146804.1754985,
+    "ast_hash": "9bc99cd03acc8b70cdf82896bddea595",
+    "semantic_hash": "9bc99cd03acc8b70cdf82896bddea595"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Documentation\\VB.WindowsDnsLogAnalysisUsage.md": {
+    "mtime": 1778146093.3112967,
+    "ast_hash": "abd05ee8eace9597cb25b0ef89f753c7",
+    "semantic_hash": "abd05ee8eace9597cb25b0ef89f753c7"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\README.md": {
+    "mtime": 1777662524.3497796,
+    "ast_hash": "cd38dbff931b92d9d75701e6c64a1c4c",
+    "semantic_hash": "cd38dbff931b92d9d75701e6c64a1c4c"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WorkstationReport\\Public\\Printer_Management\\Readme.md": {
+    "mtime": 1778583975.9415512,
+    "ast_hash": "e64bb2e856b2b65a5b0aa3ce8d73a135",
+    "semantic_hash": "e64bb2e856b2b65a5b0aa3ce8d73a135"
+  },
+  "C:\\Users\\Vibhu.Bhatnagar\\Documents\\GitHub\\ITAdmin_Tools\\VB.WindowsDNSLogAnalysis\\Documentation\\dns_log_db_module_architecture.svg": {
+    "mtime": 1778125263.786844,
+    "ast_hash": "224b1706186882e1db338f92bfed4ad4",
+    "semantic_hash": "224b1706186882e1db338f92bfed4ad4"
+  }
+}

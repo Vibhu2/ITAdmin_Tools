@@ -1,0 +1,133 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">VB.AdminTools</S>
+      <Version N="Version">1.1.0</Version>
+      <S N="Type">Module</S>
+      <S N="Description">VB.AdminTools -- Miscellaneous sysadmin utilities for day-to-day Windows administration. Covers reboot detection, environment checks, and general-purpose tooling not specific to a dedicated module.</S>
+      <S N="Author">Vibhu Bhatnagar</S>
+      <S N="CompanyName">Vibhu_Bhatnagar</S>
+      <S N="Copyright">(c) 2026 Vibhu Bhatnagar. All rights reserved.</S>
+      <DT N="PublishedDate">2026-05-07T09:58:22+05:30</DT>
+      <Obj N="InstalledDate" RefId="1">
+        <DT>2026-06-02T23:52:12.9059455+05:30</DT>
+        <MS>
+          <Obj N="DisplayHint" RefId="2">
+            <TN RefId="1">
+              <T>Microsoft.PowerShell.Commands.DisplayHintType</T>
+              <T>System.Enum</T>
+              <T>System.ValueType</T>
+              <T>System.Object</T>
+            </TN>
+            <ToString>DateTime</ToString>
+            <I32>2</I32>
+          </Obj>
+        </MS>
+      </Obj>
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://github.com/Vibhu2/ITAdmin_Tools/blob/main/LICENSE</URI>
+      <URI N="ProjectUri">https://github.com/Vibhu2/ITAdmin_Tools/tree/main/VB.AdminTools</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="3">
+        <TN RefId="2">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>PowerShell</S>
+          <S>Sysadmin</S>
+          <S>Windows</S>
+          <S>AD</S>
+          <S>MSP</S>
+          <S>Automation</S>
+          <S>VBTools</S>
+          <S>AdminTools</S>
+          <S>Utilities</S>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="4">
+        <TN RefId="3">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="2" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">v1.1.0 -- 05-05-2026 -- DNS analysis: added Get-VBDNSTopTalkers, Get-VBDNSTopDomains (pipeline + Export-Csv ready), Resolve-VBDNSHostname (PTR + device-type classification). Rewrote Format-VBDNSTopTalkers and Format-VBDNSTopDomains as display-only consumers with rank column and showing-N-of-total header._x000D__x000A_            v1.0.1 -- 02-05-2026 -- Fixed manifest ReleaseNotes syntax error._x000D__x000A_            v1.0.0 -- 30-04-2026 -- Initial release. Get-VBPendingReboot: checks CBS, Windows Update, pending file rename operations, Server Feature Manager, computer rename, and domain join reboot flags. Supports local and remote execution, optional SCCM detection via -IncludeSCCM.</S>
+      <Obj N="Dependencies" RefId="6">
+        <TNRef RefId="2" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="7">
+        <TN RefId="4">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">(c) 2026 Vibhu Bhatnagar. All rights reserved.</S>
+          <S N="description">VB.AdminTools -- Miscellaneous sysadmin utilities for day-to-day Windows administration. Covers reboot detection, environment checks, and general-purpose tooling not specific to a dedicated module.</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="releaseNotes">v1.1.0 -- 05-05-2026 -- DNS analysis: added Get-VBDNSTopTalkers, Get-VBDNSTopDomains (pipeline + Export-Csv ready), Resolve-VBDNSHostname (PTR + device-type classification). Rewrote Format-VBDNSTopTalkers and Format-VBDNSTopDomains as display-only consumers with rank column and showing-N-of-total header._x000D__x000A_            v1.0.1 -- 02-05-2026 -- Fixed manifest ReleaseNotes syntax error._x000D__x000A_            v1.0.0 -- 30-04-2026 -- Initial release. Get-VBPendingReboot: checks CBS, Windows Update, pending file rename operations, Server Feature Manager, computer rename, and domain join reboot flags. Supports local and remote execution, optional SCCM detection via -IncludeSCCM.</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">11</S>
+          <S N="downloadCount">221</S>
+          <S N="packageSize">19810</S>
+          <S N="published">5/7/2026 9:58:22 AM +05:30</S>
+          <S N="created">5/7/2026 9:58:22 AM +05:30</S>
+          <S N="lastUpdated">5/29/2026 7:35:34 PM +05:30</S>
+          <S N="tags">PowerShell Sysadmin Windows AD MSP Automation VBTools AdminTools Utilities PSModule</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2026-05-29T19:35:34Z</S>
+          <S N="NormalizedVersion">1.1.0</S>
+          <S N="Authors">Vibhu Bhatnagar</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">VB.AdminTools.nuspec|Filter_DNS_Logs\Get-VBDNSLogSummary.ps1|Get-VBPendingReboot.ps1|README.md|VB.AdminTools.psd1|VB.AdminTools.psm1</S>
+          <S N="GUID">f7a2c3e1-9d4b-4a8f-b6e0-2c5d7f1a3e9b</S>
+          <S N="PowerShellVersion">5.1</S>
+          <S N="CompanyName">Realtime-IT</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\Vibhu.Bhatnagar\Documents\PowerShell\Modules\VB.AdminTools\1.1.0</S>
+    </MS>
+  </Obj>
+</Objs>

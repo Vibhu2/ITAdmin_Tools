@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Get-VBSmbSharePermission
 # MODULE   : VBTools
-# VERSION  : 1.0.1
+# VERSION  : 1.0.2
 # CHANGED  : 29-05-2026 -- Initial release
 # AUTHOR   : Vibhu
 # PURPOSE  : Returns SMB share-level and NTFS top-level ACEs as objects

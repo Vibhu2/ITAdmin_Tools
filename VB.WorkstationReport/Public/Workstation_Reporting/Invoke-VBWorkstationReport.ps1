@@ -17,7 +17,7 @@ function Invoke-VBWorkstationReport {
 
     .DESCRIPTION
     Invoke-VBWorkstationReport orchestrates seven data collection functions:
-      - Get-VBNetworkInterface           -> <DomainName>_<COMPUTERNAME>_NI.csv
+      - Get-VBNetworkInterface           -> <DomainName>_<COMPUTERNAME>_NIC.csv
       - Get-VBOneDriveFolderBackupStatus -> <DomainName>_<COMPUTERNAME>_ODFB.csv
       - Get-VBSyncCenterStatus           -> <DomainName>_<COMPUTERNAME>_CNC.csv
       - Get-VBUserFolderRedirections     -> <DomainName>_<COMPUTERNAME>_UFR.csv
@@ -32,6 +32,7 @@ function Invoke-VBWorkstationReport {
       - Get-VBLoggedOnUserGpResults -> <DomainName>_<COMPUTERNAME>_UserGpResult-systeminfo.csv'
       - Get-VBLoggedOnUserGpResults -> <DomainName>_<COMPUTERNAME>_UserGpResult-appliedgpos.csv'
       - Get-VBLoggedOnUserGpResults -> <DomainName>_<COMPUTERNAME>_UserGpResult-securitygroups.csv'
+      - Get-VDiskInventory                   -> <DomainName>_<COMPUTERNAME>_DiskInventory.csv
 
     All parameters are mandatory -- no defaults are set. OutputPath must exist before
     the function runs; if it does not exist the function warns and stops immediately.
@@ -141,7 +142,7 @@ function Invoke-VBWorkstationReport {
             Duration         = '00:00.000'
             Status           = 'Failed'
             CollectionTime   = $collectionTime
-            
+
         }
     }
 
@@ -164,7 +165,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 2: OneDrive Folder Backup Status ----------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_ODFR.csv"
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_ODFB.csv"
         Write-Verbose "Collecting OneDrive folder backup status..."
         try {
             Get-VBOneDriveFolderBackupStatus |
@@ -246,7 +247,7 @@ function Invoke-VBWorkstationReport {
         Write-Verbose "Collecting user Device Azure Joined Status..."
         try {
             Get-DSRegStatus | Select-Object DeviceName, AzureAdJoined, TenantName, TenantId, DomainJoined, WorkplaceTenantName, TpmProtected |
-            Export-Csv -Path (Join-Path $OutputPath "${computerName}_${DomainName}_DSRegStatus.csv") -NoTypeInformation -Force
+            Export-Csv -Path (Join-Path $OutputPath "${computerName}_${DomainName}_AzJoinStatus.csv") -NoTypeInformation -Force
         } catch {
             $errors.Add("DsRegStatus: $($_.Exception.Message)")
             Write-Warning "User Device Azure Joined Status collection failed: $($_.Exception.Message)"
@@ -312,6 +313,19 @@ function Invoke-VBWorkstationReport {
             $errors.Add("UserGPOResult: $($_.Exception.Message)")
             Write-Warning "Logged on user GP result collection failed: $($_.Exception.Message)"
         }
+
+         # -- Report 12 Disk Inventory -------------------------------------------------
+         $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_DiskInventory.csv"
+         Write-Verbose "Collecting disk inventory..."
+         try {
+             Get-VDiskInventory |
+             Export-Csv -Path $csvPath -NoTypeInformation -Force
+             $csvFiles.Add($csvPath)
+             Write-Verbose "Saved: $csvPath"
+         } catch {
+             $errors.Add("DiskInventory: $($_.Exception.Message)")
+             Write-Warning "Disk inventory collection failed: $($_.Exception.Message)"
+          }
 
         # -- Upload -------------------------------------------------------------------
         $uploadResults = @()

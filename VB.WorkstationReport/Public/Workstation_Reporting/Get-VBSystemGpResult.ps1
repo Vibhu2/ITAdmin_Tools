@@ -71,26 +71,30 @@ function Get-VBSystemGpResult {
                 $GpoStartLine = ($Lines | Select-String 'Applied Group Policy Objects' | Select-Object -First 1).LineNumber
                 $GpoEndLine   = ($Lines | Select-String 'The computer is a part of' | Select-Object -First 1).LineNumber
 
-                $AppliedGPOs = $Lines[($GpoStartLine)..($GpoEndLine - 2)] |
-                    Where-Object { $_.Trim() -ne '' -and $_ -notmatch '---' -and $_ -notmatch 'Applied Group Policy' } |
-                    ForEach-Object {
-                        [PSCustomObject]@{
-                            ComputerName = $computer
-                            GPOName      = $_.Trim()
+                $AppliedGPOs = if ($null -ne $GpoStartLine -and $null -ne $GpoEndLine -and $GpoEndLine -gt $GpoStartLine) {
+                    $Lines[($GpoStartLine)..($GpoEndLine - 2)] |
+                        Where-Object { $_.Trim() -ne '' -and $_ -notmatch '---' -and $_ -notmatch 'Applied Group Policy' } |
+                        ForEach-Object {
+                            [PSCustomObject]@{
+                                ComputerName = $computer
+                                GPOName      = $_.Trim()
+                            }
                         }
-                    }
+                } else { $null }
 
                 # Step 4 -- Parse Security Groups block
                 $SgStartLine = ($Lines | Select-String 'The computer is a part of the following security groups' | Select-Object -First 1).LineNumber
 
-                $SecurityGroups = $Lines[($SgStartLine)..($Lines.Count - 1)] |
-                    Where-Object { $_.Trim() -ne '' -and $_ -notmatch '---' -and $_ -notmatch 'security groups' } |
-                    ForEach-Object {
-                        [PSCustomObject]@{
-                            ComputerName  = $computer
-                            SecurityGroup = $_.Trim()
+                $SecurityGroups = if ($null -ne $SgStartLine) {
+                    $Lines[($SgStartLine)..($Lines.Count - 1)] |
+                        Where-Object { $_.Trim() -ne '' -and $_ -notmatch '---' -and $_ -notmatch 'security groups' } |
+                        ForEach-Object {
+                            [PSCustomObject]@{
+                                ComputerName  = $computer
+                                SecurityGroup = $_.Trim()
+                            }
                         }
-                    }
+                } else { $null }
 
                 # Step 5 -- Build result object
                 [PSCustomObject]@{

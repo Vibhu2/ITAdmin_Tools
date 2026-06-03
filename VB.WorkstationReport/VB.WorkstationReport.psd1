@@ -6,7 +6,7 @@
 
 @{
     # Module identity
-    ModuleVersion     = '1.10.4'
+    ModuleVersion     = '1.11.0'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -36,6 +36,10 @@
             HelpInfoUri  = 'https://pwsh.in/posts/printer-mapping-powershell-vb-workstationreport/'
             LinkedinUri  = 'https://www.linkedin.com/in/vibhu-bhatnagar-02622798/'
             ReleaseNotes = @'
+v1.11.0 -- 03-06-2026 -- New: Get-VBLoggedOnUser -- returns interactive logon sessions with quser enrichment (user, domain, SID, session name/ID, state, idle time, logon time).
+                         New: Get-VBSystemGpResult -- parses gpresult /r /scope computer into structured PSCustomObjects (SystemInfo, AppliedGPOs, SecurityGroups).
+                         New: Get-VBLoggedOnUserGpResult -- runs user-scoped gpresult for every logged-on interactive user; returns per-user policy data.
+                         Updated: Invoke-VBWorkstationReport now includes all three new reports in its orchestrated output (7 new CSVs: LoggedOnUsers, sysGpResult x3, UserGpResult x3).
 v1.10.4 -- 12-05-2026 -- Structural fix: Add-VBUserPrinter moved to Printer_Management subfolder; Mount-VBUserHive and Dismount-VBUserHive moved to Private (no longer exported).
 v1.10.3 -- 04-05-2026 -- Set-VBUserPrinterMigration: Existing printer port corrected via Set-Printer; fixes UNC path in printer properties.
 v1.10.2 -- 04-05-2026 -- Set-VBUserPrinterMigration: Username filter now matches short name, DOMAIN\user, and profile folder name.

@@ -38,6 +38,9 @@ Install-Module -Name VB.WorkstationReport -Scope CurrentUser
 | `Set-VBUserPrinterMigration` | Migrates printer mappings from old to new paths via CSV |
 | `Invoke-VBasCurrentUser` | Runs a scriptblock in the context of the logged-on user from SYSTEM |
 | `Get-VBDiskInventory` | collects workstation Disk information usage and health information |
+| `Get-VBLoggedOnUser` | Returns interactive logon sessions with quser session detail (user, SID, session name/ID, state, idle time, logon time) |
+| `Get-VBSystemGpResult` | Parses gpresult /r /scope computer into structured objects (SystemInfo, AppliedGPOs, SecurityGroups) |
+| `Get-VBLoggedOnUserGpResult` | Runs user-scoped gpresult for every logged-on interactive user; returns per-user Group Policy data |
 
 ---
 

@@ -289,23 +289,26 @@ function Invoke-VBWorkstationReport {
             Write-Warning "Logged on user session collection failed: $($_.Exception.Message)"
         }
 
-        # -- Report 11 Logged On User GP Results -------------------------------------------------
+# -- Report 11 Logged On User GP Results -------------------------------------------------
         Write-Verbose "Collecting logged on user GP result data..."
         try {
-            $userGpResult = Get-VBLoggedOnUserGpResults
+            $userGpResults = Get-VBLoggedOnUserGpResult  # singular -- matches function name
 
             $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UserGpResult-systeminfo.csv"
-            $userGpResult | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
+            $userGpResults | Select-Object -ExcludeProperty AppliedGPOs, SecurityGroups |
+                Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
 
             $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UserGpResult-appliedgpos.csv"
-            $userGpResult.AppliedGPOs | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
+            $userGpResults | ForEach-Object { $_.AppliedGPOs } |
+                Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
 
             $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UserGpResult-securitygroups.csv"
-            $userGpResult.SecurityGroups | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
+            $userGpResults | ForEach-Object { $_.SecurityGroups } |
+                Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
 

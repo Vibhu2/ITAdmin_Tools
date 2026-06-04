@@ -29,10 +29,10 @@ function Invoke-VBWorkstationReport {
       - Get-vbsystnemgpresult           -> <DomainName>_<COMPUTERNAME>_sysGpResult-appliedgpos.csv
       - Get-vbsystnemgpresult           -> <DomainName>_<COMPUTERNAME>_sysGpResult-securitygroups.csv
       - Get-VBLoggedOnUser           -> <DomainName_><COMPUTERNAME>_LoggedOnUsers.csv
-      - Get-VBLoggedOnUserGpResults -> <DomainName>_<COMPUTERNAME>_UserGpResult-systeminfo.csv'
-      - Get-VBLoggedOnUserGpResults -> <DomainName>_<COMPUTERNAME>_UserGpResult-appliedgpos.csv'
-      - Get-VBLoggedOnUserGpResults -> <DomainName>_<COMPUTERNAME>_UserGpResult-securitygroups.csv'
-      - Get-VDiskInventory                   -> <DomainName>_<COMPUTERNAME>_DiskInventory.csv
+      - Get-VBLoggedOnUserGpResult -> <DomainName>_<COMPUTERNAME>_UserGpResult-systeminfo.csv'
+      - Get-VBLoggedOnUserGpResult -> <DomainName>_<COMPUTERNAME>_UserGpResult-appliedgpos.csv'
+      - Get-VBLoggedOnUserGpResult -> <DomainName>_<COMPUTERNAME>_UserGpResult-securitygroups.csv'
+      - Get-VBDiskInventory                  -> <DomainName>_<COMPUTERNAME>_DiskInventory.csv
 
     All parameters are mandatory -- no defaults are set. OutputPath must exist before
     the function runs; if it does not exist the function warns and stops immediately.
@@ -289,46 +289,42 @@ function Invoke-VBWorkstationReport {
             Write-Warning "Logged on user session collection failed: $($_.Exception.Message)"
         }
 
-# -- Report 11 Logged On User GP Results -------------------------------------------------
-        Write-Verbose "Collecting logged on user GP result data..."
+        # -- Report 11 Logged On User GP Results -------------------------------------------------
+        Write-Verbose "Collecting logged on user GPO results..."
         try {
-            $userGpResults = Get-VBLoggedOnUserGpResult  # singular -- matches function name
-
-            $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UserGpResult-systeminfo.csv"
-            $userGpResults | Select-Object -ExcludeProperty AppliedGPOs, SecurityGroups |
-                Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
+            $csvPath = Join-Path $OutputPath "${DomainName}_${ComputerName}_UserGpResult-systeminfo.csv"
+            Get-VBLoggedOnUserGpResult | Select-Object -Property ComputerName, Status, UserName, LastApplied, AppliedFrom, SlowLink, DomainName, DomainType, CollectionTime | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
 
-            $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UserGpResult-appliedgpos.csv"
-            $userGpResults | ForEach-Object { $_.AppliedGPOs } |
-                Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
+            $csvPath = Join-Path $OutputPath "${DomainName}_${ComputerName}_UserGpResult-AppliedGPOs.csv"
+            Get-VBLoggedOnUserGpResult | Select-Object -ExpandProperty AppliedGPOs | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
 
-            $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UserGpResult-securitygroups.csv"
-            $userGpResults | ForEach-Object { $_.SecurityGroups } |
-                Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
+            $csvPath = Join-Path $OutputPath "${DomainName}_${ComputerName}_UserGpResult-SecurityGroups.csv"
+            Get-VBLoggedOnUserGpResult | Select-Object -ExpandProperty SecurityGroups | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
 
         } catch {
-            $errors.Add("UserGPOResult: $($_.Exception.Message)")
-            Write-Warning "Logged on user GP result collection failed: $($_.Exception.Message)"
+            $errors.Add("UserGpResult-systeminfo: $($_.Exception.Message)")
+            $errors.Add("UserGpResult-AppliedGPOs: $($_.Exception.Message)")
+            $errors.Add("UserGpResult-SecurityGroups: $($_.Exception.Message)")
+            Write-Warning "Logged on user GPO result collection failed: $($_.Exception.Message)"
         }
-
-         # -- Report 12 Disk Inventory -------------------------------------------------
-         $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_DiskInventory.csv"
-         Write-Verbose "Collecting disk inventory..."
-         try {
-             Get-VDiskInventory |
-             Export-Csv -Path $csvPath -NoTypeInformation -Force
-             $csvFiles.Add($csvPath)
-             Write-Verbose "Saved: $csvPath"
-         } catch {
-             $errors.Add("DiskInventory: $($_.Exception.Message)")
-             Write-Warning "Disk inventory collection failed: $($_.Exception.Message)"
-          }
+        # -- Report 12 Disk Inventory -------------------------------------------------
+        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_DiskInventory.csv"
+        Write-Verbose "Collecting disk inventory..."
+        try {
+            Get-VBDiskInventory |
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        } catch {
+            $errors.Add("DiskInventory: $($_.Exception.Message)")
+            Write-Warning "Disk inventory collection failed: $($_.Exception.Message)"
+        }
 
         # -- Upload -------------------------------------------------------------------
         $uploadResults = @()

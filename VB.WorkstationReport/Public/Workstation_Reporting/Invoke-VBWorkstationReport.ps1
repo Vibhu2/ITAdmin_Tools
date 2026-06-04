@@ -1,7 +1,7 @@
 # ============================================================
 # FUNCTION : Invoke-VBWorkstationReport
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.5.1
+# VERSION  : 1.5.2
 # CHANGED  : 16-04-2026 -- All parameters made mandatory, defaults removed.
 #                          OutputPath validated upfront -- warns and stops if missing.
 #                          OutputPath validated again before upload.
@@ -242,11 +242,12 @@ function Invoke-VBWorkstationReport {
             Write-Warning "User shell folder collection failed: $($_.Exception.Message)"
         }
         # -- Report 8 AzJoinStatus -------------------------------------------------------------
-
         $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_AzJoinStatus.csv"
         Write-Verbose "Collecting user Device Azure Joined Status..."
         try {
-            Get-VBAzureJoinStatus | Export-Csv -Path (Join-Path $OutputPath "${DomainName}_${computerName}_AzJoinStatus.csv") -NoTypeInformation -Force
+            Get-VBAzureJoinStatus | Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)                          # ← add this
+            Write-Verbose "Saved: $csvPath"                  # ← add this for consistency
         } catch {
             $errors.Add("DsRegStatus: $($_.Exception.Message)")
             Write-Warning "User Device Azure Joined Status collection failed: $($_.Exception.Message)"

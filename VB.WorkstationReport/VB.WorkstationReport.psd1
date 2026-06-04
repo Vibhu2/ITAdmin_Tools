@@ -1,12 +1,12 @@
 #
 # VB.WorkstationReport.psd1 -- Module manifest
-# Version : 1.12.0
+# Version : 1.12.1
 # Author  : Vibhu Bhatnagar
 #
 
 @{
     # Module identity
-    ModuleVersion     = '1.12.0'
+    ModuleVersion     = '1.12.1'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'

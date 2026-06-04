@@ -1,12 +1,12 @@
 #
 # VB.WorkstationReport.psd1 -- Module manifest
-# Version : 1.5.1
+# Version : 1.12.0
 # Author  : Vibhu Bhatnagar
 #
 
 @{
     # Module identity
-    ModuleVersion     = '1.11.1'
+    ModuleVersion     = '1.12.0'
     GUID              = 'a3f9d2b1-4c7e-4f8a-9b2d-1e5f6c3a7d0e'
     Author            = 'Vibhu Bhatnagar'
     CompanyName       = 'Realtime-IT'
@@ -36,6 +36,9 @@
             HelpInfoUri  = 'https://pwsh.in/posts/printer-mapping-powershell-vb-workstationreport/'
             LinkedinUri  = 'https://www.linkedin.com/in/vibhu-bhatnagar-02622798/'
             ReleaseNotes = @'
+v1.12.0 -- 04-06-2026 -- Renamed: Get-DSRegStatus -> Invoke-VBAzureADJoinedStatus to align with module naming conventions.
+                         New: Get-VBJoinType -- determines workstation join state (Azure AD, local AD, or Workgroup) and retrieves the logon server.
+                         Updated: Invoke-VBWorkstationReport now includes join type data in the generated report.
 v1.11.1 -- 04-06-2026 -- Fixed: Invoke-VBWorkstationReport report generation logic for user-applied GPOs; corrected function call issue causing script self-invocation; fixed spelling error in function name reference.
 v1.11.0 -- 03-06-2026 -- New: Get-VBLoggedOnUser -- returns interactive logon sessions with quser enrichment (user, domain, SID, session name/ID, state, idle time, logon time).
                          New: Get-VBSystemGpResult -- parses gpresult /r /scope computer into structured PSCustomObjects (SystemInfo, AppliedGPOs, SecurityGroups).

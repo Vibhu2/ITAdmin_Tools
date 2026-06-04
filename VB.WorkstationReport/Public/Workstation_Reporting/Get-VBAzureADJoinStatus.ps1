@@ -28,7 +28,7 @@
     Retrieves Azure AD join status from local computer.
 
 .EXAMPLE
-    Get-DSRegstatus -ComputerName SERVER01
+    Get-VBAzureJoinStatus-ComputerName SERVER01
     Retrieves Azure AD join status from SERVER01.
 
 .EXAMPLE
@@ -36,7 +36,7 @@
     Pipeline input — retrieves status from multiple computers.
 
 .EXAMPLE
-    Get-DSRegstatus | Select-Object ComputerName, AzureAdJoined, TenantName, DeviceName
+    Get-VBAzureJoinStatus| Select-Object ComputerName, AzureAdJoined, TenantName, DeviceName
     Select specific properties from flat output.
 
 .OUTPUTS
@@ -48,8 +48,8 @@
     Modified : 24-05-2026
     Category : Security
 #>
-# Note :- Get-VBAzureADJoinStatus is same copy of Get-DSRegstatus with different function names o that code will not break
-function Get-DSRegstatus {
+# Note :- Get-VBAzureADJoinStatus is same copy of Get-VBAzureJoinStatuswith different function names o that code will not break
+function Get-VBAzureJoinStatus{
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]

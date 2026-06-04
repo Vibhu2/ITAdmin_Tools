@@ -152,7 +152,7 @@ function Invoke-VBWorkstationReport {
         Remove-Item -Path (Join-Path $OutputPath '*.csv') -Force -ErrorAction SilentlyContinue
 
         # -- Report 1: Network Interfaces ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_NIC.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_NIC.csv"
         Write-Verbose "Collecting network interfaces..."
         try {
             Get-VBNetworkInterface |
@@ -165,7 +165,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 2: OneDrive Folder Backup Status ----------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_ODFB.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_ODFB.csv"
         Write-Verbose "Collecting OneDrive folder backup status..."
         try {
             Get-VBOneDriveFolderBackupStatus |
@@ -173,12 +173,12 @@ function Invoke-VBWorkstationReport {
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
         } catch {
-            $errors.Add("ODFR: $($_.Exception.Message)")
+            $errors.Add("ODFB: $($_.Exception.Message)")
             Write-Warning "OneDrive folder backup collection failed: $($_.Exception.Message)"
         }
 
         # -- Report 3: Sync Center Status ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_CNC.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_CSC.csv"
         Write-Verbose "Collecting Sync Center status..."
         try {
             Get-VBSyncCenterStatus |
@@ -186,12 +186,12 @@ function Invoke-VBWorkstationReport {
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"
         } catch {
-            $errors.Add("CNC: $($_.Exception.Message)")
+            $errors.Add("CSC: $($_.Exception.Message)")
             Write-Warning "Sync Center collection failed: $($_.Exception.Message)"
         }
 
         # -- Report 4: User Folder Redirections ---------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_UFR.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UFR.csv"
         Write-Verbose "Collecting folder redirections..."
         try {
             Get-VBUserFolderRedirections -TableOutput |
@@ -204,7 +204,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 5: User Printer Mappings ------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_UPM.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UPM.csv"
         Write-Verbose "Collecting printer mappings..."
         try {
             Get-VBUserPrinterMappings -TableOutput |
@@ -217,7 +217,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 6: User Profiles --------------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_UP.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_UP.csv"
         Write-Verbose "Collecting user profiles..."
         try {
             Get-VBUserProfile |
@@ -230,7 +230,7 @@ function Invoke-VBWorkstationReport {
         }
 
         # -- Report 7: User Shell Folders ---------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_USF.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_USF.csv"
         Write-Verbose "Collecting user shell folders..."
         try {
             Get-VBUserShellFolders |
@@ -241,13 +241,12 @@ function Invoke-VBWorkstationReport {
             $errors.Add("USF: $($_.Exception.Message)")
             Write-Warning "User shell folder collection failed: $($_.Exception.Message)"
         }
-        # -- Report 8 DsRegStatus -------------------------------------------------------------
+        # -- Report 8 AzJoinStatus -------------------------------------------------------------
 
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_DsRegStatus.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_AzJoinStatus.csv"
         Write-Verbose "Collecting user Device Azure Joined Status..."
         try {
-            Get-DSRegStatus | Select-Object DeviceName, AzureAdJoined, TenantName, TenantId, DomainJoined, WorkplaceTenantName, TpmProtected |
-            Export-Csv -Path (Join-Path $OutputPath "${computerName}_${DomainName}_AzJoinStatus.csv") -NoTypeInformation -Force
+            Get-VBAzureJoinStatus | Export-Csv -Path (Join-Path $OutputPath "${DomainName}_${computerName}_AzJoinStatus.csv") -NoTypeInformation -Force
         } catch {
             $errors.Add("DsRegStatus: $($_.Exception.Message)")
             Write-Warning "User Device Azure Joined Status collection failed: $($_.Exception.Message)"
@@ -314,7 +313,7 @@ function Invoke-VBWorkstationReport {
             Write-Warning "Logged on user GPO result collection failed: $($_.Exception.Message)"
         }
         # -- Report 12 Disk Inventory -------------------------------------------------
-        $csvPath = Join-Path $OutputPath "${computerName}_${DomainName}_DiskInventory.csv"
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_DiskInventory.csv"
         Write-Verbose "Collecting disk inventory..."
         try {
             Get-VBDiskInventory |
@@ -325,7 +324,18 @@ function Invoke-VBWorkstationReport {
             $errors.Add("DiskInventory: $($_.Exception.Message)")
             Write-Warning "Disk inventory collection failed: $($_.Exception.Message)"
         }
-
+        #--Report 13 Logon Server / Join Type ---------------------------------------------------------
+        $csvPath = Join-Path $OutputPath "${DomainName}_${computerName}_SystemADType.csv"
+        Write-Verbose "Collecting system AD join type and logon server information  "
+        try {
+            Get-VBAzureJoinStatus | Get-VBJoinType |
+            Export-Csv -Path $csvPath -NoTypeInformation -Force
+            $csvFiles.Add($csvPath)
+            Write-Verbose "Saved: $csvPath"
+        } catch {
+            $errors.Add("SystemADType: $($_.Exception.Message)")
+            Write-Warning "System AD join type and logon server collection failed: $($_.Exception.Message)"
+        }
         # -- Upload -------------------------------------------------------------------
         $uploadResults = @()
         if (-not $SkipUpload) {

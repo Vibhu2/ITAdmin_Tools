@@ -1,11 +1,10 @@
-# ============================================================
-# FUNCTION : Get-VBImportStatus
-# VERSION  : 1.0.0
+# --- Get-VBImportStatus ---
+# VERSION  : 1.0.1
+# CHANGED  : 2026-06-04 -- Replace .NET SHA256 crypto API with Get-FileHash (AV compatibility)
 # CHANGED  : 2026-05-07 -- Initial build
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Check whether a log file has already been imported via SHA256 hash
 # ENCODING : UTF-8 with BOM
-# ============================================================
 
 <#
 .SYNOPSIS
@@ -38,9 +37,9 @@
         ImportedAt      -- ISO8601 timestamp of the original import, or $null if not yet imported
 
 .NOTES
-    Version  : 1.0.0
+    Version  : 1.0.1
     Author   : Vibhu Bhatnagar
-    Modified : 2026-05-07
+    Modified : 2026-06-04
     Category : Private
     Called by: Import-VBDNSLog (before starting the parse pipeline)
 
@@ -53,36 +52,20 @@ function Get-VBImportStatus {
     param(
         [Parameter(Mandatory = $true)]
         [string]$FilePath,
-
         [Parameter(Mandatory = $true)]
         [string]$DatabasePath
     )
-
     # Step 1 -- Compute SHA256 hash of the file
-    $sha256   = [System.Security.Cryptography.SHA256]::Create()
-    $stream   = $null
-    $fileHash = ''
-
-    try {
-        $stream    = [System.IO.FileStream]::new($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
-        $hashBytes = $sha256.ComputeHash($stream)
-        $fileHash  = [System.BitConverter]::ToString($hashBytes).Replace('-', '').ToLower()
-    }
-    finally {
-        if ($null -ne $stream) { $stream.Dispose() }
-        $sha256.Dispose()
-    }
+    $logHash = (Get-FileHash -LiteralPath $FilePath -Algorithm SHA256).Hash.ToLower()
 
     # Step 2 -- Query ImportLog for matching hash
     $importedAt      = $null
     $alreadyImported = $false
-
     try {
         $result = Invoke-SqliteQuery -DataSource $DatabasePath `
             -Query "SELECT ImportedAt FROM ImportLog WHERE FileHash = @hash LIMIT 1" `
-            -SqlParameters @{ hash = $fileHash } `
+            -SqlParameters @{ hash = $logHash } `
             -ErrorAction Stop
-
         if ($null -ne $result -and $result.Count -gt 0) {
             $alreadyImported = $true
             $importedAt      = $result[0].ImportedAt
@@ -93,11 +76,10 @@ function Get-VBImportStatus {
         Write-Verbose "Get-VBImportStatus: Could not query ImportLog -- $($_.Exception.Message)"
         $alreadyImported = $false
     }
-
     # Step 3 -- Return status object
     return [PSCustomObject]@{
         FilePath        = $FilePath
-        FileHash        = $fileHash
+        FileHash        = $logHash
         AlreadyImported = $alreadyImported
         ImportedAt      = $importedAt
     }

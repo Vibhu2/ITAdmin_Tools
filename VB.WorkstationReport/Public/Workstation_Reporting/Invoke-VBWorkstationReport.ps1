@@ -292,7 +292,7 @@ function Invoke-VBWorkstationReport {
         # -- Report 11 Logged On User GP Results -------------------------------------------------
         Write-Verbose "Collecting logged on user GPO results..."
         try {
-            $csvPath = Join-Path $OutputPath "${DomainName}_${ComputerName}_UserGpResult-systeminfo.csv"
+            $csvPath = Join-Path $OutputPath "${DomainName}_${ComputerName}_UserGpResult-SystemInfo.csv"
             Get-VBLoggedOnUserGpResult | Select-Object -Property ComputerName, Status, UserName, LastApplied, AppliedFrom, SlowLink, DomainName, DomainType, CollectionTime | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8 -Force
             $csvFiles.Add($csvPath)
             Write-Verbose "Saved: $csvPath"

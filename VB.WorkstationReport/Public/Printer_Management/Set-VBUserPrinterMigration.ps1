@@ -1,22 +1,20 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.3
-# CHANGED  : 04-05-2026 -- Existing printer port updated via Set-Printer when on wrong port; fixes UNC showing in properties
+# VERSION  : 1.1.5
+# CHANGED  : 10-06-2026 -- PrinterName support: explicit display name for IP printers via CSV column or -PrinterNames hashtable; falls back to UNC share segment when omitted
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.1.5 -- 10-06-2026 -- PrinterName support: optional PrinterName column in MappingCsv and -PrinterNames hashtable for explicit IP printer display names; machine-level Add-Printer uses friendly name when supplied, falls back to UNC share segment otherwise
+# v1.1.4 -- 10-06-2026 -- Backup failure now skips migration for that user (no silent loss); all output objects share one property set (fixes Export-Csv dropping Error column); localhost/127.0.0.1/FQDN now detected as local; strict IPv4 validation via Test-VBIPv4Address; null/empty hashtable values rejected with clear error; $profile renamed to $userProfile (no longer shadows automatic variable); driver existence checked before Add-Printer
 # v1.1.3 -- 04-05-2026 -- Existing printer port updated via Set-Printer when wrong; fixes UNC path still showing in printer properties
 # v1.1.2 -- 04-05-2026 -- Username filter matches short name, DOMAIN\user, and profile folder name (fixes Entra ID / dot-format accounts)
 # v1.1.1 -- 04-05-2026 -- Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop
 # v1.1.0 -- 04-05-2026 -- -TargetUser replaced with -Username[] and -SID[] arrays; warn per missing user
-# v1.0.2 -- 23-04-2026 -- Added CSV format sample and step-by-step creation example
-# v1.0.1 -- 23-04-2026 -- Finalized: expanded help with all migration types and RMM examples
-# v1.0.0 -- 23-04-2026 -- Initial release
 # ============================================================
-
 function Set-VBUserPrinterMigration {
     <#
     .SYNOPSIS
@@ -42,11 +40,13 @@ function Set-VBUserPrinterMigration {
         Machine-level printer port and printer additions (required for IP destinations)
         are NOT supported when ComputerName targets a remote machine. The script must
         run locally on each target workstation (e.g. deployed via RMM). A terminating
-        error is thrown if a remote target requires machine-level port additions.
+        error is raised for that machine (reported as a Failed result object) if a
+        remote target requires machine-level port additions.
 
     .PARAMETER ComputerName
         Target computer(s). Accepts pipeline input. Defaults to local machine.
         Remote targets are supported for user registry changes only.
+        'localhost', '127.0.0.1', '.' and the local FQDN are all recognised as local.
 
     .PARAMETER Credential
         Credentials for remote execution. Not required for local or domain-joined targets.
@@ -57,14 +57,22 @@ function Set-VBUserPrinterMigration {
         For IP destinations, supply -DriverName. Use -MappingCsv for per-printer driver control.
 
     .PARAMETER MappingCsv
-        Path to a CSV file with columns: OldPath, NewPath, DriverName
-        DriverName is required when NewPath is an IP address. CSV takes priority over
+        Path to a CSV file with columns: OldPath, NewPath, DriverName, PrinterName
+        DriverName is required when NewPath is an IP address. PrinterName is optional --
+        when supplied it sets the display name for the IP printer (overrides the default
+        of deriving the name from the old UNC share segment). CSV takes priority over
         -PrinterMappings if both are supplied.
 
     .PARAMETER DriverName
         Driver name to use when adding IP printers via -PrinterMappings hashtable.
         Applies to all IP destinations in the hashtable. For per-printer driver control
         use -MappingCsv with a DriverName column instead.
+
+    .PARAMETER PrinterNames
+        Optional hashtable mapping OldPath to a friendly display name for IP destinations.
+        Use with -PrinterMappings when you want explicit printer names without a CSV file.
+        Example: @{ '\\\\PrintServer\\HP01' = 'hpprinter410' }
+        For per-printer name control via CSV, add a PrinterName column to -MappingCsv instead.
 
     .PARAMETER Username
         One or more usernames to target. Only profiles matching these usernames are
@@ -79,10 +87,12 @@ function Set-VBUserPrinterMigration {
     .PARAMETER BackupMappings
         When specified, saves a snapshot of each user's current printer mappings to
         -BackupPath before applying changes. Requires -BackupPath.
+        If the backup fails for a user, migration is SKIPPED for that user and a
+        Failed result object is emitted -- changes are never applied without a backup.
 
     .PARAMETER BackupPath
         Full path to the CSV file where backup snapshots are written.
-        Required when -BackupMappings is specified.
+        Required when -BackupMappings is specified. The parent directory must exist.
 
     .EXAMPLE
         # -------------------------------------------------------------------
@@ -189,7 +199,8 @@ function Set-VBUserPrinterMigration {
 
     .OUTPUTS
         PSCustomObject
-        Returns one object per user per printer mapping action:
+        Returns one object per user per printer mapping action. All objects share the
+        same property set in the same order (safe for Export-Csv):
           - ComputerName : Target computer
           - Username     : User profile name
           - SID          : User SID
@@ -198,11 +209,11 @@ function Set-VBUserPrinterMigration {
           - Action       : 'Migrated', 'Skipped', 'AlreadyMigrated', or 'Failed'
           - Details      : Registry actions taken or reason for skip/failure
           - Status       : 'Success' or 'Failed'
-          - Error        : Error message (only present on failure)
+          - Error        : Error message (empty on success)
           - Timestamp    : Time of action (dd-MM-yyyy HH:mm:ss)
 
     .NOTES
-        Version  : 1.1.0
+        Version  : 1.1.5
         Author   : Vibhu Bhatnagar
         Category : Printer Management
 
@@ -211,6 +222,7 @@ function Set-VBUserPrinterMigration {
         - Administrative privileges
         - PrintManagement module (built-in on Windows 8 / Server 2012+)
         - Required printer drivers already installed for IP destinations
+          (verified before Add-Printer -- a clear error is raised if missing)
         - Script must run locally on target machine for IP printer port additions
     #>
 
@@ -228,6 +240,8 @@ function Set-VBUserPrinterMigration {
 
         [string]$DriverName,
 
+        [hashtable]$PrinterNames,
+
         [string[]]$Username,
 
         [string[]]$SID,
@@ -240,9 +254,34 @@ function Set-VBUserPrinterMigration {
     begin {
         $ErrorActionPreference = 'Stop'
 
+        # --- Private helper: strict IPv4 validation ---
+        # Anchored regex rejects trailing junk (e.g. '10.1.1.1.bad');
+        # IPAddress.TryParse rejects out-of-range octets (e.g. '999.1.1.1').
+        function Test-VBIPv4Address {
+            param([string]$Value)
+
+            if ($Value -notmatch '^\d{1,3}(\.\d{1,3}){3}$') { return $false }
+
+            $parsed = $null
+            return [System.Net.IPAddress]::TryParse($Value, [ref]$parsed)
+        }
+
+        # --- Canonical output property set (single shape for all result objects) ---
+        $outputProperties = @(
+            'ComputerName', 'Username', 'SID', 'OldPath', 'NewPath',
+            'Action', 'Details', 'Status', 'Error', 'Timestamp'
+        )
+
         # --- Validate backup parameters ---
-        if ($BackupMappings -and -not $BackupPath) {
-            throw '-BackupPath is required when -BackupMappings is specified.'
+        if ($BackupMappings) {
+            if (-not $BackupPath) {
+                throw '-BackupPath is required when -BackupMappings is specified.'
+            }
+
+            $backupDir = Split-Path -Path $BackupPath -Parent
+            if ($backupDir -and -not (Test-Path -Path $backupDir)) {
+                throw "Backup directory does not exist: $backupDir"
+            }
         }
 
         # --- Step 1: Load and validate mappings ---
@@ -257,37 +296,48 @@ function Set-VBUserPrinterMigration {
             $csvRows = Import-Csv -Path $MappingCsv -ErrorAction Stop
 
             foreach ($row in $csvRows) {
-                if (-not $row.OldPath -or -not $row.NewPath) {
+                if ([string]::IsNullOrWhiteSpace($row.OldPath) -or [string]::IsNullOrWhiteSpace($row.NewPath)) {
                     throw "CSV row is missing OldPath or NewPath: $($row | Out-String)"
                 }
 
-                $isNewIP = $row.NewPath.Trim() -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+                $isNewIP = Test-VBIPv4Address -Value $row.NewPath.Trim()
 
                 if ($isNewIP -and -not $row.DriverName) {
                     throw "DriverName is required for IP destinations. Missing for: $($row.OldPath.Trim()) -> $($row.NewPath.Trim())"
                 }
 
                 $normalizedMappings.Add([PSCustomObject]@{
-                        OldPath    = $row.OldPath.Trim()
-                        NewPath    = $row.NewPath.Trim()
-                        DriverName = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
+                        OldPath     = $row.OldPath.Trim()
+                        NewPath     = $row.NewPath.Trim()
+                        DriverName  = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
+                        PrinterName = if ($row.PSObject.Properties['PrinterName'] -and $row.PrinterName) { $row.PrinterName.Trim() } else { '' }
                     })
             }
         }
         elseif ($PrinterMappings) {
             foreach ($key in $PrinterMappings.Keys) {
-                $oldPath = $key.Trim()
-                $newPath = $PrinterMappings[$key].Trim()
-                $isNewIP = $newPath -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+                # Guard against null/empty keys or values -- .Trim() on $null throws
+                # an opaque NullReferenceException otherwise
+                if ([string]::IsNullOrWhiteSpace([string]$key)) {
+                    throw 'PrinterMappings contains a null or empty key. Every entry must be OldPath = NewPath.'
+                }
+                if ([string]::IsNullOrWhiteSpace([string]$PrinterMappings[$key])) {
+                    throw "PrinterMappings value for '$key' is null or empty. Every OldPath key must have a NewPath value."
+                }
+
+                $oldPath = ([string]$key).Trim()
+                $newPath = ([string]$PrinterMappings[$key]).Trim()
+                $isNewIP = Test-VBIPv4Address -Value $newPath
 
                 if ($isNewIP -and -not $DriverName) {
                     throw "Use -DriverName when supplying IP destinations via -PrinterMappings, or use -MappingCsv for per-printer driver control. Missing driver for: $oldPath -> $newPath"
                 }
 
                 $normalizedMappings.Add([PSCustomObject]@{
-                        OldPath    = $oldPath
-                        NewPath    = $newPath
-                        DriverName = if ($isNewIP) { $DriverName } else { '' }
+                        OldPath     = $oldPath
+                        NewPath     = $newPath
+                        DriverName  = if ($isNewIP) { $DriverName } else { '' }
+                        PrinterName = if ($PrinterNames -and $PrinterNames.ContainsKey($oldPath)) { $PrinterNames[$oldPath] } else { '' }
                     })
             }
         }
@@ -298,26 +348,35 @@ function Set-VBUserPrinterMigration {
         if ($normalizedMappings.Count -eq 0) {
             throw 'No valid printer mappings found in the supplied input.'
         }
+
+        # Mappings with IP destinations require machine-level port/printer setup.
+        # Invariant across computers -- computed once here.
+        $ipMappings = @($normalizedMappings | Where-Object { Test-VBIPv4Address -Value $_.NewPath })
     }
 
     process {
         foreach ($computer in $ComputerName) {
+            # Robust local-machine detection: name equality alone misses
+            # 'localhost', '127.0.0.1', '.' and FQDN forms of the local name.
+            $isLocal = $computer -in @('.', 'localhost', '127.0.0.1', '::1') -or
+                       ($computer -split '\.')[0] -eq $env:COMPUTERNAME
+
             try {
                 # --- Step 2: Machine-level TCP/IP port and printer setup (local only) ---
-                $ipMappings = $normalizedMappings |
-                Where-Object { $_.NewPath -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' }
-
-                if ($ipMappings) {
-                    if ($computer -ne $env:COMPUTERNAME) {
+                if ($ipMappings.Count -gt 0) {
+                    if (-not $isLocal) {
                         throw "Machine-level printer port additions are not supported for remote targets. Run this script directly on '$computer' via RMM."
                     }
 
                     foreach ($ipMap in $ipMappings) {
                         $portName = "IP_$($ipMap.NewPath)"
 
-                        # Only derive display name when old path is UNC (IP->IP handled per-user)
+                        # Use explicit PrinterName when supplied; otherwise derive from UNC share segment
                         $printerDisplayName = $null
-                        if ($ipMap.OldPath -match '^\\\\') {
+                        if ($ipMap.PrinterName) {
+                            $printerDisplayName = $ipMap.PrinterName
+                        }
+                        elseif ($ipMap.OldPath -match '^\\\\') {
                             $printerDisplayName = $ipMap.OldPath.TrimEnd('\').Split('\')[-1]
                         }
 
@@ -346,6 +405,12 @@ function Set-VBUserPrinterMigration {
                                 }
                             }
                             else {
+                                # Pre-check the driver -- Add-Printer fails with an opaque
+                                # error if the driver is not in the driver store
+                                if (-not (Get-PrinterDriver -Name $ipMap.DriverName -ErrorAction SilentlyContinue)) {
+                                    throw "Printer driver '$($ipMap.DriverName)' is not installed on $computer. Install the driver before running the migration. Run 'Get-PrinterDriver | Select-Object Name' to list installed drivers."
+                                }
+
                                 if ($PSCmdlet.ShouldProcess($printerDisplayName, 'Add printer')) {
                                     Add-Printer -Name $printerDisplayName -PortName $portName -DriverName $ipMap.DriverName -ErrorAction Stop
                                     Write-Verbose "Added printer: $printerDisplayName on port $portName"
@@ -358,7 +423,7 @@ function Set-VBUserPrinterMigration {
                 # --- Step 3: Resolve target user profiles ---
                 $profileParams = @{ ErrorAction = 'Stop' }
 
-                if ($computer -ne $env:COMPUTERNAME) {
+                if (-not $isLocal) {
                     $profileParams['ComputerName'] = $computer
                     if ($Credential) { $profileParams['Credential'] = $Credential }
                 }
@@ -402,14 +467,16 @@ function Set-VBUserPrinterMigration {
                 }
 
                 # --- Step 4: Per-user migration ---
-                foreach ($profile in $profiles) {
+                # NOTE: $userProfile (not $profile) -- $profile would shadow the
+                # automatic $PROFILE variable
+                foreach ($userProfile in $profiles) {
 
                     $mountParams = @{
-                        SID         = $profile.SID
+                        SID         = $userProfile.SID
                         ErrorAction = 'Stop'
                     }
 
-                    if ($computer -ne $env:COMPUTERNAME) {
+                    if (-not $isLocal) {
                         $mountParams['ComputerName'] = $computer
                         if ($Credential) { $mountParams['Credential'] = $Credential }
                     }
@@ -419,45 +486,69 @@ function Set-VBUserPrinterMigration {
                     if ($mountResult.Status -ne 'Success') {
                         [PSCustomObject]@{
                             ComputerName = $computer
-                            Username     = $profile.Username
-                            SID          = $profile.SID
+                            Username     = $userProfile.Username
+                            SID          = $userProfile.SID
                             OldPath      = 'N/A'
                             NewPath      = 'N/A'
                             Action       = 'Failed'
                             Details      = "Hive mount failed: $($mountResult.Error)"
-                            Error        = $mountResult.Error
                             Status       = 'Failed'
+                            Error        = $mountResult.Error
                             Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                         }
                         continue
                     }
 
                     try {
-                        # Optional: backup current printer state before changes
+                        # Optional: backup current printer state before changes.
+                        # A failed backup SKIPS migration for this user -- changes
+                        # are never applied without the requested safety net.
                         if ($BackupMappings) {
-                            $backupParams = @{ TableOutput = $true; ErrorAction = 'SilentlyContinue' }
-                            if ($computer -ne $env:COMPUTERNAME) {
-                                $backupParams['ComputerName'] = $computer
-                                if ($Credential) { $backupParams['Credential'] = $Credential }
+                            try {
+                                $backupParams = @{ TableOutput = $true; ErrorAction = 'Stop' }
+                                if (-not $isLocal) {
+                                    $backupParams['ComputerName'] = $computer
+                                    if ($Credential) { $backupParams['Credential'] = $Credential }
+                                }
+
+                                $backupData = Get-VBUserPrinterMappings @backupParams |
+                                Where-Object { $_.Username -eq $userProfile.Username }
+
+                                if ($backupData) {
+                                    $backupData | Export-Csv -Path $BackupPath -NoTypeInformation -Append -Encoding UTF8 -ErrorAction Stop
+                                }
                             }
-
-                            $backupData = Get-VBUserPrinterMappings @backupParams |
-                            Where-Object { $_.Username -eq $profile.Username }
-
-                            if ($backupData) {
-                                $backupData | Export-Csv -Path $BackupPath -NoTypeInformation -Append -Encoding UTF8
+                            catch {
+                                Write-Warning "Backup failed for '$($userProfile.Username)' on $computer -- migration skipped for this user. $($_.Exception.Message)"
+                                [PSCustomObject]@{
+                                    ComputerName = $computer
+                                    Username     = $userProfile.Username
+                                    SID          = $userProfile.SID
+                                    OldPath      = 'N/A'
+                                    NewPath      = 'N/A'
+                                    Action       = 'Failed'
+                                    Details      = "Backup failed -- migration skipped for this user: $($_.Exception.Message)"
+                                    Status       = 'Failed'
+                                    Error        = $_.Exception.Message
+                                    Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                                }
+                                continue
                             }
                         }
 
-                        # Apply registry changes for this user
+                        # Apply registry changes for this user.
+                        # Select-Object normalizes every result to the canonical
+                        # property set so Export-Csv never drops columns.
                         Update-VBUserPrinterRegistry `
                             -SID          $mountResult.SID `
-                            -Username     $profile.Username `
+                            -Username     $userProfile.Username `
                             -ComputerName $computer `
-                            -Mappings     $normalizedMappings
+                            -Mappings     $normalizedMappings |
+                        Select-Object -Property $outputProperties
                     }
                     finally {
                         # Always dismount -- even if Update-VBUserPrinterRegistry throws
+                        # or the backup catch issues 'continue'
                         $mountResult | Dismount-VBUserHive | Out-Null
                     }
                 }
@@ -471,8 +562,8 @@ function Set-VBUserPrinterMigration {
                     NewPath      = 'N/A'
                     Action       = 'Failed'
                     Details      = $_.Exception.Message
-                    Error        = $_.Exception.Message
                     Status       = 'Failed'
+                    Error        = $_.Exception.Message
                     Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                 }
             }

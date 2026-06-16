@@ -1,13 +1,14 @@
 # ============================================================
 # FUNCTION : Add-VBUserPrinter
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.0.0
-# CHANGED  : 23-04-2026 -- Initial release
+# VERSION  : 1.1.0
+# CHANGED  : 09-06-2026 -- Added -DriverPath auto-install; fixed UNC idempotency check
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Adds a new UNC or IP printer to all or targeted user profiles
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.1.0 -- 09-06-2026 -- Added -DriverPath for auto driver install; fixed UNC AlreadyExists false positive
 # v1.0.0 -- 23-04-2026 -- Initial release
 # ============================================================
 
@@ -52,9 +53,35 @@ function Add-VBUserPrinter {
 
     .PARAMETER DriverName
         Printer driver name. Required when PrinterPath is an IP address.
-        The driver must already be installed on the machine.
+        If the driver is not installed, supply -DriverPath to auto-install it.
         Example: 'HP LaserJet 400 M401', 'Canon Generic Plus PCL6'
         Run: Get-PrinterDriver | Select-Object Name  to list installed drivers.
+
+    .PARAMETER DriverPath
+        Path to the driver source used to auto-install the driver named by -DriverName
+        when it is not present in the local driver store. Three forms are accepted:
+
+          .inf file   -- pnputil stages the single .inf directly.
+                         '\\FileServer\Drivers\HP4100\hppcl5ms.inf'
+                         '\\PrintServer\print$\x64\3\hppcl5ms.inf'
+
+          .cab file   -- expanded to a temp folder; pnputil /subdirs stages all .inf
+                         files found inside. Drivers from the Microsoft Update Catalog
+                         and some vendors (HP, Konica) ship as .cab.
+                         '\\FileServer\Drivers\HP4100-driver.cab'
+
+          Folder      -- pnputil /subdirs recurses the entire folder tree. Use when the
+                         driver has already been extracted from a .cab or .exe installer.
+                         '\\FileServer\Drivers\HP4100\'
+                         'C:\Temp\HP4100-extracted\'
+
+        NOTE: .exe and .msi installers are NOT supported -- extract them first to a
+        folder (e.g. run 'setup.exe /extract C:\Temp\HP4100' or use 7-Zip), then pass
+        the extracted folder as -DriverPath.
+
+        pnputil stages all found .inf files into the local driver store, then
+        Add-PrinterDriver registers the driver named by -DriverName.
+        If the driver is already installed this parameter is ignored.
 
     .PARAMETER TargetUser
         Username or SID of a specific user to target. When omitted all non-system
@@ -83,6 +110,36 @@ function Add-VBUserPrinter {
         Add-VBUserPrinter -PrinterPath '10.30.1.55' `
                           -PrinterName 'HP_Accounts' `
                           -DriverName  'HP LaserJet 400 M401'
+
+    .EXAMPLE
+        # Auto-install driver from a .inf on a shared drive
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet P2035 Class Driver' `
+                          -DriverPath  '\\FileServer\Drivers\HP\hppcl5ms.inf' `
+                          -TargetUser  'setup'
+
+    .EXAMPLE
+        # Auto-install from a .cab (e.g. downloaded from Microsoft Update Catalog)
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet 4100 Series PCL' `
+                          -DriverPath  '\\FileServer\Drivers\hp4100-driver.cab'
+
+    .EXAMPLE
+        # Auto-install from a pre-extracted folder (EXE/MSI extracted beforehand)
+        # setup.exe /extract C:\Temp\HP4100  (or 7-Zip)
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet 4100 Series PCL' `
+                          -DriverPath  'C:\Temp\HP4100'
+
+    .EXAMPLE
+        # Auto-install driver pulled from the print server's driver share
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet 4100 Series PCL' `
+                          -DriverPath  '\\DSI-DH01-DC-004\print$\x64\3\hppcl5ms.inf'
 
     .EXAMPLE
         # Adding a UNC printer to all user profiles (no DriverName needed)
@@ -132,7 +189,7 @@ function Add-VBUserPrinter {
           - Timestamp    : Time of action (dd-MM-yyyy HH:mm:ss)
 
     .NOTES
-        Version  : 1.0.0
+        Version  : 1.1.0
         Author   : Vibhu Bhatnagar
         Category : Printer Management
 
@@ -140,7 +197,7 @@ function Add-VBUserPrinter {
         - PowerShell 5.1
         - Administrative privileges
         - PrintManagement module (built-in on Windows 8 / Server 2012+)
-        - Printer driver already installed for IP destinations
+        - Driver must be installed or -DriverPath supplied for IP destinations
         - Script must run locally on target machine for IP printer port additions
 
         Related functions:
@@ -156,6 +213,8 @@ function Add-VBUserPrinter {
         [string]$PrinterName,
 
         [string]$DriverName,
+
+        [string]$DriverPath,
 
         [string]$TargetUser,
 
@@ -213,6 +272,63 @@ function Add-VBUserPrinter {
                 if ($isIP) {
                     if ($computer -ne $env:COMPUTERNAME) {
                         throw "Machine-level printer port additions are not supported for remote targets. Run this script directly on '$computer' via RMM."
+                    }
+
+                    # --- Auto-install driver if not in the local driver store ---
+                    if (-not (Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue)) {
+                        if (-not $DriverPath) {
+                            throw "Driver '$DriverName' is not installed and no -DriverPath was supplied. " +
+                                  "Supply -DriverPath as a .inf file, .cab file, or extracted folder. " +
+                                  "Run: Get-PrinterDriver | Select-Object Name  to see what is installed."
+                        }
+                        if (-not (Test-Path -Path $DriverPath)) {
+                            throw "DriverPath not found: '$DriverPath'"
+                        }
+
+                        Write-Verbose "Driver '$DriverName' not installed -- staging from '$DriverPath'"
+
+                        $extension    = [System.IO.Path]::GetExtension($DriverPath).ToLower()
+                        $stagePath    = $null
+                        $tempExpanded = $null
+
+                        if ($extension -eq '.cab') {
+                            # Expand .cab to a temp folder, then stage all .inf files inside
+                            $tempExpanded = Join-Path $env:TEMP "VBDriverStage_$([System.IO.Path]::GetFileNameWithoutExtension($DriverPath))"
+                            New-Item -ItemType Directory -Path $tempExpanded -Force | Out-Null
+                            $expandOutput = & expand.exe -F:* $DriverPath $tempExpanded 2>&1
+                            if ($LASTEXITCODE -ne 0) {
+                                throw "expand.exe failed to extract '$DriverPath': $expandOutput"
+                            }
+                            $stagePath = "$tempExpanded\*.inf"
+                            $pnpArgs   = @('/add-driver', $stagePath, '/subdirs', '/install')
+                        }
+                        elseif ($extension -eq '.inf') {
+                            # Direct .inf -- stage the single file
+                            $pnpArgs = @('/add-driver', $DriverPath, '/install')
+                        }
+                        elseif ((Get-Item -Path $DriverPath).PSIsContainer) {
+                            # Folder -- recurse for all .inf files
+                            $stagePath = "$($DriverPath.TrimEnd('\'))\*.inf"
+                            $pnpArgs   = @('/add-driver', $stagePath, '/subdirs', '/install')
+                        }
+                        else {
+                            throw "Unsupported DriverPath format '$extension'. Supply a .inf file, .cab file, or an extracted folder. " +
+                                  "For .exe or .msi installers, extract them first (e.g. setup.exe /extract C:\Temp\Driver) then pass the folder."
+                        }
+
+                        try {
+                            $pnpOutput = & pnputil @pnpArgs 2>&1
+                            if ($LASTEXITCODE -ne 0) {
+                                throw "pnputil failed to stage driver: $pnpOutput"
+                            }
+                            Add-PrinterDriver -Name $DriverName -ErrorAction Stop
+                            Write-Verbose "Driver '$DriverName' installed successfully."
+                        }
+                        finally {
+                            if ($tempExpanded -and (Test-Path $tempExpanded)) {
+                                Remove-Item -Path $tempExpanded -Recurse -Force -ErrorAction SilentlyContinue
+                            }
+                        }
                     }
 
                     if (-not (Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue)) {
@@ -290,7 +406,14 @@ function Add-VBUserPrinter {
                         $alreadyExists = $false
 
                         if ($isUNC) {
-                            $alreadyExists = Test-Path -Path "$connectPath\$connectionKeyName"
+                            # Both the Connections subkey AND the Devices value must exist.
+                            # Checking only the Connections key produced false AlreadyExists
+                            # when a prior run created the key but failed before writing Devices.
+                            $connectionExists = Test-Path -Path "$connectPath\$connectionKeyName"
+                            $deviceProps      = Get-ItemProperty -Path $devicesPath -ErrorAction SilentlyContinue
+                            $deviceExists     = $deviceProps -and
+                                                ($deviceProps.PSObject.Properties.Name -contains $resolvedPrinterName)
+                            $alreadyExists    = $connectionExists -and $deviceExists
                         }
                         else {
                             $deviceProps = Get-ItemProperty -Path $devicesPath -ErrorAction SilentlyContinue

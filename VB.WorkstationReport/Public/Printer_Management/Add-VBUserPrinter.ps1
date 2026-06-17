@@ -1,13 +1,16 @@
 # ============================================================
 # FUNCTION : Add-VBUserPrinter
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.0.0
-# CHANGED  : 23-04-2026 -- Initial release
+# VERSION  : 1.3.0
+# CHANGED  : 16-06-2026 -- Capture Install-VBPrinterDriver result; RebootRequired propagated to output
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Adds a new UNC or IP printer to all or targeted user profiles
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
+# v1.3.0 -- 16-06-2026 -- Capture Install-VBPrinterDriver result; RebootRequired in all output objects
+# v1.2.0 -- 16-06-2026 -- Replaced inline driver install block with Install-VBPrinterDriver private helper
+# v1.1.0 -- 09-06-2026 -- Added -DriverPath for auto driver install; fixed UNC AlreadyExists false positive
 # v1.0.0 -- 23-04-2026 -- Initial release
 # ============================================================
 
@@ -52,9 +55,35 @@ function Add-VBUserPrinter {
 
     .PARAMETER DriverName
         Printer driver name. Required when PrinterPath is an IP address.
-        The driver must already be installed on the machine.
+        If the driver is not installed, supply -DriverPath to auto-install it.
         Example: 'HP LaserJet 400 M401', 'Canon Generic Plus PCL6'
         Run: Get-PrinterDriver | Select-Object Name  to list installed drivers.
+
+    .PARAMETER DriverPath
+        Path to the driver source used to auto-install the driver named by -DriverName
+        when it is not present in the local driver store. Three forms are accepted:
+
+          .inf file   -- pnputil stages the single .inf directly.
+                         '\\FileServer\Drivers\HP4100\hppcl5ms.inf'
+                         '\\PrintServer\print$\x64\3\hppcl5ms.inf'
+
+          .cab file   -- expanded to a temp folder; pnputil /subdirs stages all .inf
+                         files found inside. Drivers from the Microsoft Update Catalog
+                         and some vendors (HP, Konica) ship as .cab.
+                         '\\FileServer\Drivers\HP4100-driver.cab'
+
+          Folder      -- pnputil /subdirs recurses the entire folder tree. Use when the
+                         driver has already been extracted from a .cab or .exe installer.
+                         '\\FileServer\Drivers\HP4100\'
+                         'C:\Temp\HP4100-extracted\'
+
+        NOTE: .exe and .msi installers are NOT supported -- extract them first to a
+        folder (e.g. run 'setup.exe /extract C:\Temp\HP4100' or use 7-Zip), then pass
+        the extracted folder as -DriverPath.
+
+        pnputil stages all found .inf files into the local driver store, then
+        Add-PrinterDriver registers the driver named by -DriverName.
+        If the driver is already installed this parameter is ignored.
 
     .PARAMETER TargetUser
         Username or SID of a specific user to target. When omitted all non-system
@@ -83,6 +112,36 @@ function Add-VBUserPrinter {
         Add-VBUserPrinter -PrinterPath '10.30.1.55' `
                           -PrinterName 'HP_Accounts' `
                           -DriverName  'HP LaserJet 400 M401'
+
+    .EXAMPLE
+        # Auto-install driver from a .inf on a shared drive
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet P2035 Class Driver' `
+                          -DriverPath  '\\FileServer\Drivers\HP\hppcl5ms.inf' `
+                          -TargetUser  'setup'
+
+    .EXAMPLE
+        # Auto-install from a .cab (e.g. downloaded from Microsoft Update Catalog)
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet 4100 Series PCL' `
+                          -DriverPath  '\\FileServer\Drivers\hp4100-driver.cab'
+
+    .EXAMPLE
+        # Auto-install from a pre-extracted folder (EXE/MSI extracted beforehand)
+        # setup.exe /extract C:\Temp\HP4100  (or 7-Zip)
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet 4100 Series PCL' `
+                          -DriverPath  'C:\Temp\HP4100'
+
+    .EXAMPLE
+        # Auto-install driver pulled from the print server's driver share
+        Add-VBUserPrinter -PrinterPath '10.150.1.22' `
+                          -PrinterName 'HP LaserJet 4100 Series PCL' `
+                          -DriverName  'HP LaserJet 4100 Series PCL' `
+                          -DriverPath  '\\DSI-DH01-DC-004\print$\x64\3\hppcl5ms.inf'
 
     .EXAMPLE
         # Adding a UNC printer to all user profiles (no DriverName needed)
@@ -132,7 +191,7 @@ function Add-VBUserPrinter {
           - Timestamp    : Time of action (dd-MM-yyyy HH:mm:ss)
 
     .NOTES
-        Version  : 1.0.0
+        Version  : 1.1.0
         Author   : Vibhu Bhatnagar
         Category : Printer Management
 
@@ -140,10 +199,11 @@ function Add-VBUserPrinter {
         - PowerShell 5.1
         - Administrative privileges
         - PrintManagement module (built-in on Windows 8 / Server 2012+)
-        - Printer driver already installed for IP destinations
+        - Driver must be installed or -DriverPath supplied for IP destinations
         - Script must run locally on target machine for IP printer port additions
 
         Related functions:
+        - Install-VBPrinterDriver     -- private helper that stages and installs drivers
         - Set-VBUserPrinterMigration  -- replaces existing printer mappings
         - Get-VBUserPrinterMappings   -- audits current printer mappings per user
     #>
@@ -156,6 +216,8 @@ function Add-VBUserPrinter {
         [string]$PrinterName,
 
         [string]$DriverName,
+
+        [string]$DriverPath,
 
         [string]$TargetUser,
 
@@ -208,12 +270,17 @@ function Add-VBUserPrinter {
 
     process {
         foreach ($computer in $ComputerName) {
+            $rebootRequired = $false
             try {
                 # --- Step 1: Machine-level port and printer for IP destinations (local only) ---
                 if ($isIP) {
                     if ($computer -ne $env:COMPUTERNAME) {
                         throw "Machine-level printer port additions are not supported for remote targets. Run this script directly on '$computer' via RMM."
                     }
+
+                    # --- Auto-install driver if not in the local driver store ---
+                    $driverResult   = Install-VBPrinterDriver -DriverName $DriverName -DriverPath $DriverPath
+                    $rebootRequired = $driverResult.RebootRequired
 
                     if (-not (Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue)) {
                         if ($PSCmdlet.ShouldProcess($portName, 'Add TCP/IP printer port')) {
@@ -265,16 +332,17 @@ function Add-VBUserPrinter {
 
                     if ($mountResult.Status -ne 'Success') {
                         [PSCustomObject]@{
-                            ComputerName = $computer
-                            Username     = $profile.Username
-                            SID          = $profile.SID
-                            PrinterPath  = $PrinterPath
-                            PrinterName  = $resolvedPrinterName
-                            Action       = 'Failed'
-                            SetAsDefault = $false
-                            Status       = 'Failed'
-                            Error        = "Hive mount failed: $($mountResult.Error)"
-                            Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                            ComputerName   = $computer
+                            Username       = $profile.Username
+                            SID            = $profile.SID
+                            PrinterPath    = $PrinterPath
+                            PrinterName    = $resolvedPrinterName
+                            Action         = 'Failed'
+                            SetAsDefault   = $false
+                            RebootRequired = $rebootRequired
+                            Status         = 'Failed'
+                            Error          = "Hive mount failed: $($mountResult.Error)"
+                            Timestamp      = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                         }
                         continue
                     }
@@ -290,7 +358,14 @@ function Add-VBUserPrinter {
                         $alreadyExists = $false
 
                         if ($isUNC) {
-                            $alreadyExists = Test-Path -Path "$connectPath\$connectionKeyName"
+                            # Both the Connections subkey AND the Devices value must exist.
+                            # Checking only the Connections key produced false AlreadyExists
+                            # when a prior run created the key but failed before writing Devices.
+                            $connectionExists = Test-Path -Path "$connectPath\$connectionKeyName"
+                            $deviceProps      = Get-ItemProperty -Path $devicesPath -ErrorAction SilentlyContinue
+                            $deviceExists     = $deviceProps -and
+                                                ($deviceProps.PSObject.Properties.Name -contains $resolvedPrinterName)
+                            $alreadyExists    = $connectionExists -and $deviceExists
                         }
                         else {
                             $deviceProps = Get-ItemProperty -Path $devicesPath -ErrorAction SilentlyContinue
@@ -309,15 +384,16 @@ function Add-VBUserPrinter {
 
                         if ($alreadyExists) {
                             [PSCustomObject]@{
-                                ComputerName = $computer
-                                Username     = $profile.Username
-                                SID          = $profile.SID
-                                PrinterPath  = $PrinterPath
-                                PrinterName  = $resolvedPrinterName
-                                Action       = 'AlreadyExists'
-                                SetAsDefault = $false
-                                Status       = 'Success'
-                                Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                                ComputerName   = $computer
+                                Username       = $profile.Username
+                                SID            = $profile.SID
+                                PrinterPath    = $PrinterPath
+                                PrinterName    = $resolvedPrinterName
+                                Action         = 'AlreadyExists'
+                                SetAsDefault   = $false
+                                RebootRequired = $rebootRequired
+                                Status         = 'Success'
+                                Timestamp      = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                             }
                             continue
                         }
@@ -354,29 +430,31 @@ function Add-VBUserPrinter {
                         }
 
                         [PSCustomObject]@{
-                            ComputerName = $computer
-                            Username     = $profile.Username
-                            SID          = $profile.SID
-                            PrinterPath  = $PrinterPath
-                            PrinterName  = $resolvedPrinterName
-                            Action       = 'Added'
-                            SetAsDefault = $wasSetAsDefault
-                            Status       = 'Success'
-                            Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                            ComputerName   = $computer
+                            Username       = $profile.Username
+                            SID            = $profile.SID
+                            PrinterPath    = $PrinterPath
+                            PrinterName    = $resolvedPrinterName
+                            Action         = 'Added'
+                            SetAsDefault   = $wasSetAsDefault
+                            RebootRequired = $rebootRequired
+                            Status         = 'Success'
+                            Timestamp      = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                         }
                     }
                     catch {
                         [PSCustomObject]@{
-                            ComputerName = $computer
-                            Username     = $profile.Username
-                            SID          = $profile.SID
-                            PrinterPath  = $PrinterPath
-                            PrinterName  = $resolvedPrinterName
-                            Action       = 'Failed'
-                            SetAsDefault = $false
-                            Status       = 'Failed'
-                            Error        = $_.Exception.Message
-                            Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                            ComputerName   = $computer
+                            Username       = $profile.Username
+                            SID            = $profile.SID
+                            PrinterPath    = $PrinterPath
+                            PrinterName    = $resolvedPrinterName
+                            Action         = 'Failed'
+                            SetAsDefault   = $false
+                            RebootRequired = $rebootRequired
+                            Status         = 'Failed'
+                            Error          = $_.Exception.Message
+                            Timestamp      = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                         }
                     }
                     finally {
@@ -386,16 +464,17 @@ function Add-VBUserPrinter {
             }
             catch {
                 [PSCustomObject]@{
-                    ComputerName = $computer
-                    Username     = 'N/A'
-                    SID          = 'N/A'
-                    PrinterPath  = $PrinterPath
-                    PrinterName  = $resolvedPrinterName
-                    Action       = 'Failed'
-                    SetAsDefault = $false
-                    Status       = 'Failed'
-                    Error        = $_.Exception.Message
-                    Timestamp    = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
+                    ComputerName   = $computer
+                    Username       = 'N/A'
+                    SID            = 'N/A'
+                    PrinterPath    = $PrinterPath
+                    PrinterName    = $resolvedPrinterName
+                    Action         = 'Failed'
+                    SetAsDefault   = $false
+                    RebootRequired = $rebootRequired
+                    Status         = 'Failed'
+                    Error          = $_.Exception.Message
+                    Timestamp      = (Get-Date).ToString('dd-MM-yyyy HH:mm:ss')
                 }
             }
         }

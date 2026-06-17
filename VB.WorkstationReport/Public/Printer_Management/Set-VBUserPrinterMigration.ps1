@@ -1,15 +1,15 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.1.5
-# CHANGED  : 10-06-2026 -- PrinterName support: explicit display name for IP printers via CSV column or -PrinterNames hashtable; falls back to UNC share segment when omitted
+# VERSION  : 2.0.1
+# CHANGED  : 16-06-2026 -- Capture Install-VBPrinterDriver result; Write-Warning when reboot required
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
 # ------------------------------------------------------------
 # CHANGELOG (last 3-5 only -- full history in Git)
-# v1.1.5 -- 10-06-2026 -- PrinterName support: optional PrinterName column in MappingCsv and -PrinterNames hashtable for explicit IP printer display names; machine-level Add-Printer uses friendly name when supplied, falls back to UNC share segment otherwise
-# v1.1.4 -- 10-06-2026 -- Backup failure now skips migration for that user (no silent loss); all output objects share one property set (fixes Export-Csv dropping Error column); localhost/127.0.0.1/FQDN now detected as local; strict IPv4 validation via Test-VBIPv4Address; null/empty hashtable values rejected with clear error; $profile renamed to $userProfile (no longer shadows automatic variable); driver existence checked before Add-Printer
+# v2.0.1 -- 16-06-2026 -- Capture driver install result; emit Write-Warning when RebootRequired is set
+# v2.0.0 -- 16-06-2026 -- Rich CSV: ComputerName/Username/DriverPath/DefaultPrinter columns; driver install via Install-VBPrinterDriver helper
 # v1.1.3 -- 04-05-2026 -- Existing printer port updated via Set-Printer when wrong; fixes UNC path still showing in printer properties
 # v1.1.2 -- 04-05-2026 -- Username filter matches short name, DOMAIN\user, and profile folder name (fixes Entra ID / dot-format accounts)
 # v1.1.1 -- 04-05-2026 -- Add-Printer "already exists" treated as skip; machine-level errors no longer abort per-user loop
@@ -57,10 +57,24 @@ function Set-VBUserPrinterMigration {
         For IP destinations, supply -DriverName. Use -MappingCsv for per-printer driver control.
 
     .PARAMETER MappingCsv
-        Path to a CSV file with columns: OldPath, NewPath, DriverName, PrinterName
-        DriverName is required when NewPath is an IP address. PrinterName is optional --
-        when supplied it sets the display name for the IP printer (overrides the default
-        of deriving the name from the old UNC share segment). CSV takes priority over
+        Path to a CSV file. Two formats are supported:
+
+        Rich format (recommended) -- includes ComputerName and Username columns.
+        The script filters rows to $env:COMPUTERNAME automatically and targets only
+        the users listed. Run locally on each machine (e.g. via RMM).
+        Columns: ComputerName, Username, OldPath, NewPath, DriverName, DriverPath, DefaultPrinter
+          - DriverName     : Required when NewPath is an IP address.
+          - DriverPath     : Optional. Path to driver source (.inf, .cab, or folder) used
+                             to auto-install the driver if not already present.
+          - DefaultPrinter : Optional. Display name of the printer to set as the user's
+                             default after migration. Leave blank to preserve current default.
+                             For UNC destinations the display name is the full UNC path.
+                             For IP destinations migrated from UNC it is the share name
+                             (e.g. \Server\HP_Floor2 -> HP_Floor2).
+
+        Legacy format -- no ComputerName column. Behaviour unchanged from v1.x.
+        Columns: OldPath, NewPath, DriverName [, DriverPath]
+        Use -Username / -SID to target specific users. CSV takes priority over
         -PrinterMappings if both are supplied.
 
     .PARAMETER DriverName
@@ -286,32 +300,83 @@ function Set-VBUserPrinterMigration {
 
         # --- Step 1: Load and validate mappings ---
         $normalizedMappings = [System.Collections.Generic.List[object]]::new()
+        $perUserMappings    = $null  # populated when rich CSV (ComputerName column) detected
 
         if ($MappingCsv) {
-            # CSV takes priority when both supplied
             if (-not (Test-Path -Path $MappingCsv)) {
                 throw "Mapping CSV not found: $MappingCsv"
             }
 
             $csvRows = Import-Csv -Path $MappingCsv -ErrorAction Stop
 
-            foreach ($row in $csvRows) {
-                if ([string]::IsNullOrWhiteSpace($row.OldPath) -or [string]::IsNullOrWhiteSpace($row.NewPath)) {
-                    throw "CSV row is missing OldPath or NewPath: $($row | Out-String)"
+            # Detect rich CSV format (has ComputerName column)
+            $isRichCsv = $csvRows.Count -gt 0 -and
+                         ($csvRows[0].PSObject.Properties.Name -contains 'ComputerName')
+
+            if ($isRichCsv) {
+                # Filter to this machine only
+                $csvRows = @($csvRows | Where-Object { $_.ComputerName.Trim() -eq $env:COMPUTERNAME })
+
+                if ($csvRows.Count -eq 0) {
+                    Write-Verbose "No rows matching ComputerName '$env:COMPUTERNAME' in CSV -- nothing to do."
+                    return
                 }
 
-                $isNewIP = Test-VBIPv4Address -Value $row.NewPath.Trim()
+                # Build per-user mapping structure and normalizedMappings for machine-level setup
+                $perUserMappings = @{}
+                foreach ($row in $csvRows) {
+                    if (-not $row.OldPath -or -not $row.NewPath) {
+                        throw "CSV row is missing OldPath or NewPath: $($row | Out-String)"
+                    }
 
-                if ($isNewIP -and -not $row.DriverName) {
-                    throw "DriverName is required for IP destinations. Missing for: $($row.OldPath.Trim()) -> $($row.NewPath.Trim())"
-                }
+                    $isNewIP = $row.NewPath.Trim() -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+                    if ($isNewIP -and -not $row.DriverName) {
+                        throw "DriverName is required for IP destinations. Missing for: $($row.OldPath.Trim()) -> $($row.NewPath.Trim()) (Username: $($row.Username.Trim()))"
+                    }
 
-                $normalizedMappings.Add([PSCustomObject]@{
-                        OldPath     = $row.OldPath.Trim()
-                        NewPath     = $row.NewPath.Trim()
-                        DriverName  = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
-                        PrinterName = if ($row.PSObject.Properties['PrinterName'] -and $row.PrinterName) { $row.PrinterName.Trim() } else { '' }
+                    $username = $row.Username.Trim()
+                    if (-not $perUserMappings.ContainsKey($username)) {
+                        $perUserMappings[$username] = [System.Collections.Generic.List[object]]::new()
+                    }
+
+                    $mappingObj = [PSCustomObject]@{
+                        OldPath        = $row.OldPath.Trim()
+                        NewPath        = $row.NewPath.Trim()
+                        DriverName     = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
+                        DriverPath     = if ($row.PSObject.Properties['DriverPath'] -and $row.DriverPath) { $row.DriverPath.Trim() } else { '' }
+                        DefaultPrinter = if ($row.PSObject.Properties['DefaultPrinter'] -and $row.DefaultPrinter) { $row.DefaultPrinter.Trim() } else { '' }
+                    }
+                    $perUserMappings[$username].Add($mappingObj)
+
+                    # Also add to normalizedMappings for machine-level port/printer setup
+                    $normalizedMappings.Add([PSCustomObject]@{
+                        OldPath    = $mappingObj.OldPath
+                        NewPath    = $mappingObj.NewPath
+                        DriverName = $mappingObj.DriverName
+                        DriverPath = $mappingObj.DriverPath
                     })
+                }
+            }
+            else {
+                # Legacy CSV format: OldPath, NewPath, DriverName [, DriverPath]
+                foreach ($row in $csvRows) {
+                    if (-not $row.OldPath -or -not $row.NewPath) {
+                        throw "CSV row is missing OldPath or NewPath: $($row | Out-String)"
+                    }
+
+                    $isNewIP = $row.NewPath.Trim() -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+
+                    if ($isNewIP -and -not $row.DriverName) {
+                        throw "DriverName is required for IP destinations. Missing for: $($row.OldPath.Trim()) -> $($row.NewPath.Trim())"
+                    }
+
+                    $normalizedMappings.Add([PSCustomObject]@{
+                        OldPath    = $row.OldPath.Trim()
+                        NewPath    = $row.NewPath.Trim()
+                        DriverName = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
+                        DriverPath = if ($row.PSObject.Properties['DriverPath'] -and $row.DriverPath) { $row.DriverPath.Trim() } else { '' }
+                    })
+                }
             }
         }
         elseif ($PrinterMappings) {
@@ -367,6 +432,18 @@ function Set-VBUserPrinterMigration {
                     if (-not $isLocal) {
                         throw "Machine-level printer port additions are not supported for remote targets. Run this script directly on '$computer' via RMM."
                     }
+
+                # Install required drivers for IP destinations before creating ports/printers
+                $driversToInstall = $ipMappings |
+                    Where-Object { $_.DriverName } |
+                    Sort-Object DriverName -Unique
+                foreach ($driverInfo in $driversToInstall) {
+                    $driverResult = Install-VBPrinterDriver -DriverName $driverInfo.DriverName `
+                                                             -DriverPath $driverInfo.DriverPath
+                    if ($driverResult.RebootRequired) {
+                        Write-Warning "Driver '$($driverInfo.DriverName)' requires a reboot. Printer mappings may not function until the machine is restarted."
+                    }
+                }
 
                     foreach ($ipMap in $ipMappings) {
                         $portName = "IP_$($ipMap.NewPath)"
@@ -430,7 +507,32 @@ function Set-VBUserPrinterMigration {
 
                 $profiles = Get-VBUserProfile @profileParams
 
-                if ($Username -or $SID) {
+                if ($perUserMappings) {
+                    # Rich CSV: filter profiles to usernames defined in the CSV for this machine
+                    $profiles = @($profiles | Where-Object {
+                        $p = $_
+                        $perUserMappings.Keys | Where-Object {
+                            $_ -eq $p.Username -or
+                            $_ -eq "$($p.Domain)\$($p.Username)" -or
+                            $_ -eq (Split-Path $p.ProfilePath -Leaf)
+                        }
+                    })
+                    foreach ($csvUser in $perUserMappings.Keys) {
+                        $found = $profiles | Where-Object {
+                            $csvUser -eq $_.Username -or
+                            $csvUser -eq "$($_.Domain)\$($_.Username)" -or
+                            $csvUser -eq (Split-Path $_.ProfilePath -Leaf)
+                        }
+                        if (-not $found) {
+                            Write-Warning "Username '$csvUser' from CSV not found on $computer -- skipped."
+                        }
+                    }
+                    if ($profiles.Count -eq 0) {
+                        Write-Warning "No matching profiles found on $computer -- skipping machine."
+                        continue
+                    }
+                }
+                elseif ($Username -or $SID) {
                     $profiles = @($profiles | Where-Object {
                         $p = $_
                         # Match any of: short name, DOMAIN\user, or profile folder name
@@ -536,15 +638,52 @@ function Set-VBUserPrinterMigration {
                             }
                         }
 
-                        # Apply registry changes for this user.
-                        # Select-Object normalizes every result to the canonical
-                        # property set so Export-Csv never drops columns.
-                        Update-VBUserPrinterRegistry `
-                            -SID          $mountResult.SID `
-                            -Username     $userProfile.Username `
-                            -ComputerName $computer `
-                            -Mappings     $normalizedMappings |
-                        Select-Object -Property $outputProperties
+                        # Resolve per-user mappings (rich CSV) or all mappings (legacy)
+                        $userMappings = if ($perUserMappings) {
+                            $key = $perUserMappings.Keys | Where-Object {
+                                $_ -eq $profile.Username -or
+                                $_ -eq "$($profile.Domain)\$($profile.Username)" -or
+                                $_ -eq (Split-Path $profile.ProfilePath -Leaf)
+                            } | Select-Object -First 1
+                            if ($key) { @($perUserMappings[$key]) } else { @() }
+                        }
+                        else {
+                            $normalizedMappings
+                        }
+
+                        # Apply registry changes for this user
+                        if ($userMappings.Count -gt 0) {
+                            Update-VBUserPrinterRegistry `
+                                -SID          $mountResult.SID `
+                                -Username     $profile.Username `
+                                -ComputerName $computer `
+                                -Mappings     $userMappings
+                        }
+
+                        # Explicitly set default printer if specified in CSV (overrides auto-update)
+                        $defaultRow = @($userMappings) | Where-Object { $_.DefaultPrinter } | Select-Object -First 1
+                        if ($defaultRow) {
+                            $regBase     = "Registry::HKEY_USERS\$($mountResult.SID)"
+                            $devicesPath = "$regBase\Software\Microsoft\Windows NT\CurrentVersion\Devices"
+                            $windowsPath = "$regBase\Software\Microsoft\Windows NT\CurrentVersion\Windows"
+
+                            $deviceProps = Get-ItemProperty -Path $devicesPath -ErrorAction SilentlyContinue
+                            if ($deviceProps -and
+                                ($deviceProps.PSObject.Properties.Name -contains $defaultRow.DefaultPrinter)) {
+                                $deviceValue = $deviceProps.($defaultRow.DefaultPrinter)
+                                if ($PSCmdlet.ShouldProcess(
+                                        "$($profile.Username) on $computer",
+                                        "Set default printer: $($defaultRow.DefaultPrinter)")) {
+                                    Set-ItemProperty -Path $windowsPath -Name 'Device' `
+                                        -Value "$($defaultRow.DefaultPrinter),$deviceValue" `
+                                        -Type String -Force
+                                    Write-Verbose "Set default printer '$($defaultRow.DefaultPrinter)' for $($profile.Username)"
+                                }
+                            }
+                            else {
+                                Write-Warning "DefaultPrinter '$($defaultRow.DefaultPrinter)' not found in Devices for $($profile.Username) -- skipped."
+                            }
+                        }
                     }
                     finally {
                         # Always dismount -- even if Update-VBUserPrinterRegistry throws

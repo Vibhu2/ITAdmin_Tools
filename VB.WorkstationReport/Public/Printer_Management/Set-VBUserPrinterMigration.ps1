@@ -1,8 +1,8 @@
 # ============================================================
 # FUNCTION : Set-VBUserPrinterMigration
 # MODULE   : VB.WorkstationReport
-# VERSION  : 2.0.1
-# CHANGED  : 16-06-2026 -- Capture Install-VBPrinterDriver result; Write-Warning when reboot required
+# VERSION  : 2.1.0
+# CHANGED  : 18-06-2026 -- Unified CSV: Username=* wildcard applies to all profiles; ComputerName=* fallback when machine not listed
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Migrates user printer mappings between UNC paths and IP addresses
 # ENCODING : UTF-8 with BOM
@@ -299,8 +299,10 @@ function Set-VBUserPrinterMigration {
         }
 
         # --- Step 1: Load and validate mappings ---
-        $normalizedMappings = [System.Collections.Generic.List[object]]::new()
-        $perUserMappings    = $null  # populated when rich CSV (ComputerName column) detected
+        $normalizedMappings  = [System.Collections.Generic.List[object]]::new()
+        $perUserMappings     = $null   # named-user rows from rich CSV; $null in legacy mode
+        $wildcardRowMappings = [System.Collections.Generic.List[object]]::new()  # Username=* rows
+        $isRichCsvMode       = $false
 
         if ($MappingCsv) {
             if (-not (Test-Path -Path $MappingCsv)) {
@@ -314,17 +316,24 @@ function Set-VBUserPrinterMigration {
                          ($csvRows[0].PSObject.Properties.Name -contains 'ComputerName')
 
             if ($isRichCsv) {
-                # Filter to this machine only
-                $csvRows = @($csvRows | Where-Object { $_.ComputerName.Trim() -eq $env:COMPUTERNAME })
+                $isRichCsvMode   = $true
+                $perUserMappings = @{}
 
-                if ($csvRows.Count -eq 0) {
-                    Write-Verbose "No rows matching ComputerName '$env:COMPUTERNAME' in CSV -- nothing to do."
-                    return
+                # Machine-specific rows first; fall back to wildcard ComputerName (*) rows
+                # if the current machine is not listed -- covers fleet-wide deployments
+                # where most machines share the same mapping.
+                $machineRows = @($csvRows | Where-Object { $_.ComputerName.Trim() -eq $env:COMPUTERNAME })
+
+                if ($machineRows.Count -eq 0) {
+                    $machineRows = @($csvRows | Where-Object { $_.ComputerName.Trim() -eq '*' })
+                    if ($machineRows.Count -eq 0) {
+                        Write-Verbose "No rows for '$env:COMPUTERNAME' or wildcard (*) in CSV -- nothing to do."
+                        return
+                    }
+                    Write-Verbose "No rows for '$env:COMPUTERNAME' -- applying wildcard (*) rows."
                 }
 
-                # Build per-user mapping structure and normalizedMappings for machine-level setup
-                $perUserMappings = @{}
-                foreach ($row in $csvRows) {
+                foreach ($row in $machineRows) {
                     if (-not $row.OldPath -or -not $row.NewPath) {
                         throw "CSV row is missing OldPath or NewPath: $($row | Out-String)"
                     }
@@ -334,11 +343,6 @@ function Set-VBUserPrinterMigration {
                         throw "DriverName is required for IP destinations. Missing for: $($row.OldPath.Trim()) -> $($row.NewPath.Trim()) (Username: $($row.Username.Trim()))"
                     }
 
-                    $username = $row.Username.Trim()
-                    if (-not $perUserMappings.ContainsKey($username)) {
-                        $perUserMappings[$username] = [System.Collections.Generic.List[object]]::new()
-                    }
-
                     $mappingObj = [PSCustomObject]@{
                         OldPath        = $row.OldPath.Trim()
                         NewPath        = $row.NewPath.Trim()
@@ -346,9 +350,21 @@ function Set-VBUserPrinterMigration {
                         DriverPath     = if ($row.PSObject.Properties['DriverPath'] -and $row.DriverPath) { $row.DriverPath.Trim() } else { '' }
                         DefaultPrinter = if ($row.PSObject.Properties['DefaultPrinter'] -and $row.DefaultPrinter) { $row.DefaultPrinter.Trim() } else { '' }
                     }
-                    $perUserMappings[$username].Add($mappingObj)
 
-                    # Also add to normalizedMappings for machine-level port/printer setup
+                    # Username=* (or blank) → applies to every profile on the machine
+                    # Named username       → applies only to that specific user
+                    $username = $row.Username.Trim()
+                    if ($username -eq '*' -or [string]::IsNullOrWhiteSpace($username)) {
+                        $wildcardRowMappings.Add($mappingObj)
+                    }
+                    else {
+                        if (-not $perUserMappings.ContainsKey($username)) {
+                            $perUserMappings[$username] = [System.Collections.Generic.List[object]]::new()
+                        }
+                        $perUserMappings[$username].Add($mappingObj)
+                    }
+
+                    # All rows feed machine-level port and printer setup
                     $normalizedMappings.Add([PSCustomObject]@{
                         OldPath    = $mappingObj.OldPath
                         NewPath    = $mappingObj.NewPath
@@ -371,10 +387,11 @@ function Set-VBUserPrinterMigration {
                     }
 
                     $normalizedMappings.Add([PSCustomObject]@{
-                        OldPath    = $row.OldPath.Trim()
-                        NewPath    = $row.NewPath.Trim()
-                        DriverName = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
-                        DriverPath = if ($row.PSObject.Properties['DriverPath'] -and $row.DriverPath) { $row.DriverPath.Trim() } else { '' }
+                        OldPath     = $row.OldPath.Trim()
+                        NewPath     = $row.NewPath.Trim()
+                        DriverName  = if ($row.DriverName) { $row.DriverName.Trim() } else { '' }
+                        DriverPath  = if ($row.PSObject.Properties['DriverPath'] -and $row.DriverPath) { $row.DriverPath.Trim() } else { '' }
+                        PrinterName = if ($row.PSObject.Properties['PrinterName'] -and $row.PrinterName) { $row.PrinterName.Trim() } else { '' }
                     })
                 }
             }
@@ -507,16 +524,24 @@ function Set-VBUserPrinterMigration {
 
                 $profiles = Get-VBUserProfile @profileParams
 
-                if ($perUserMappings) {
-                    # Rich CSV: filter profiles to usernames defined in the CSV for this machine
-                    $profiles = @($profiles | Where-Object {
-                        $p = $_
-                        $perUserMappings.Keys | Where-Object {
-                            $_ -eq $p.Username -or
-                            $_ -eq "$($p.Domain)\$($p.Username)" -or
-                            $_ -eq (Split-Path $p.ProfilePath -Leaf)
+                if ($isRichCsvMode) {
+                    # Wildcard rows (Username=*) cover all profiles -- no filtering needed.
+                    # Named rows only: filter profiles to those listed in the CSV.
+                    if ($wildcardRowMappings.Count -eq 0) {
+                        $profiles = @($profiles | Where-Object {
+                            $p = $_
+                            $perUserMappings.Keys | Where-Object {
+                                $_ -eq $p.Username -or
+                                $_ -eq "$($p.Domain)\$($p.Username)" -or
+                                $_ -eq (Split-Path $p.ProfilePath -Leaf)
+                            }
+                        })
+                        if ($profiles.Count -eq 0) {
+                            Write-Warning "No matching profiles found on $computer -- skipping machine."
+                            continue
                         }
-                    })
+                    }
+                    # Warn for any named user in CSV not found on this machine
                     foreach ($csvUser in $perUserMappings.Keys) {
                         $found = $profiles | Where-Object {
                             $csvUser -eq $_.Username -or
@@ -526,10 +551,6 @@ function Set-VBUserPrinterMigration {
                         if (-not $found) {
                             Write-Warning "Username '$csvUser' from CSV not found on $computer -- skipped."
                         }
-                    }
-                    if ($profiles.Count -eq 0) {
-                        Write-Warning "No matching profiles found on $computer -- skipping machine."
-                        continue
                     }
                 }
                 elseif ($Username -or $SID) {
@@ -639,13 +660,18 @@ function Set-VBUserPrinterMigration {
                         }
 
                         # Resolve per-user mappings (rich CSV) or all mappings (legacy)
-                        $userMappings = if ($perUserMappings) {
-                            $key = $perUserMappings.Keys | Where-Object {
-                                $_ -eq $profile.Username -or
-                                $_ -eq "$($profile.Domain)\$($profile.Username)" -or
-                                $_ -eq (Split-Path $profile.ProfilePath -Leaf)
-                            } | Select-Object -First 1
-                            if ($key) { @($perUserMappings[$key]) } else { @() }
+                        # Rich CSV: wildcard rows apply to everyone; named rows apply to matching user only
+                        $userMappings = if ($isRichCsvMode) {
+                            $userSpecific = @()
+                            if ($perUserMappings.Count -gt 0) {
+                                $key = $perUserMappings.Keys | Where-Object {
+                                    $_ -eq $userProfile.Username -or
+                                    $_ -eq "$($userProfile.Domain)\$($userProfile.Username)" -or
+                                    $_ -eq (Split-Path $userProfile.ProfilePath -Leaf)
+                                } | Select-Object -First 1
+                                if ($key) { $userSpecific = @($perUserMappings[$key]) }
+                            }
+                            @($wildcardRowMappings) + $userSpecific
                         }
                         else {
                             $normalizedMappings
@@ -655,7 +681,7 @@ function Set-VBUserPrinterMigration {
                         if ($userMappings.Count -gt 0) {
                             Update-VBUserPrinterRegistry `
                                 -SID          $mountResult.SID `
-                                -Username     $profile.Username `
+                                -Username     $userProfile.Username `
                                 -ComputerName $computer `
                                 -Mappings     $userMappings
                         }
@@ -672,16 +698,16 @@ function Set-VBUserPrinterMigration {
                                 ($deviceProps.PSObject.Properties.Name -contains $defaultRow.DefaultPrinter)) {
                                 $deviceValue = $deviceProps.($defaultRow.DefaultPrinter)
                                 if ($PSCmdlet.ShouldProcess(
-                                        "$($profile.Username) on $computer",
+                                        "$($userProfile.Username) on $computer",
                                         "Set default printer: $($defaultRow.DefaultPrinter)")) {
                                     Set-ItemProperty -Path $windowsPath -Name 'Device' `
                                         -Value "$($defaultRow.DefaultPrinter),$deviceValue" `
                                         -Type String -Force
-                                    Write-Verbose "Set default printer '$($defaultRow.DefaultPrinter)' for $($profile.Username)"
+                                    Write-Verbose "Set default printer '$($defaultRow.DefaultPrinter)' for $($userProfile.Username)"
                                 }
                             }
                             else {
-                                Write-Warning "DefaultPrinter '$($defaultRow.DefaultPrinter)' not found in Devices for $($profile.Username) -- skipped."
+                                Write-Warning "DefaultPrinter '$($defaultRow.DefaultPrinter)' not found in Devices for $($userProfile.Username) -- skipped."
                             }
                         }
                     }

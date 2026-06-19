@@ -1,10 +1,9 @@
 ComputerName,Username,OldPath,NewPath,DriverName,DriverPath,DefaultPrinter
-WS-ACCOUNTS-01,jsmith,\\PrintServer\Accounts-HP-LJ,\\10.10.5.20\Accounts-HP-LJ,HP LaserJet 400 M401,\\FileServer\Drivers\HP\LJ400\hpljm401.inf,\\10.10.5.20\Accounts-HP-LJ
-WS-ACCOUNTS-01,jsmith,\\PrintServer\Accounts-Canon,\\10.10.5.21\Accounts-Canon,Canon iR-ADV C5235,\\FileServer\Drivers\Canon\iRADV5235\cnz7dkd.inf,
-WS-ACCOUNTS-01,mwilliams,\\PrintServer\Accounts-HP-LJ,\\10.10.5.20\Accounts-HP-LJ,HP LaserJet 400 M401,\\FileServer\Drivers\HP\LJ400\hpljm401.inf,
-WS-ACCOUNTS-01,mwilliams,\\PrintServer\Accounts-Canon,\\10.10.5.21\Accounts-Canon,Canon iR-ADV C5235,\\FileServer\Drivers\Canon\iRADV5235\cnz7dkd.inf,\\10.10.5.21\Accounts-Canon
-WS-ACCOUNTS-01,tdavis,\\PrintServer\Accounts-HP-LJ,\\10.10.5.20\Accounts-HP-LJ,HP LaserJet 400 M401,\\FileServer\Drivers\HP\LJ400\hpljm401.inf,\\10.10.5.20\Accounts-HP-LJ
-WS-HR-02,abrown,\\PrintServer\HR-Colour,\\10.10.6.10\HR-Colour,Xerox WorkCentre 6515,\\FileServer\Drivers\Xerox\WC6515\xrxwc65.inf,\\10.10.6.10\HR-Colour
-WS-HR-02,abrown,\\PrintServer\HR-Mono,\\10.10.6.11\HR-Mono,Xerox WorkCentre 6515,,
-WS-HR-02,kpatel,\\PrintServer\HR-Colour,\\10.10.6.10\HR-Colour,Xerox WorkCentre 6515,\\FileServer\Drivers\Xerox\WC6515\xrxwc65.inf,
-WS-HR-02,kpatel,\\PrintServer\HR-Mono,\\10.10.6.11\HR-Mono,Xerox WorkCentre 6515,,\\10.10.6.11\HR-Mono
+WS-ACCOUNTS-01,jsmith,\\PrintServer\Accounts-HP-LJ,10.10.5.20,HP LaserJet 400 M401,\\FileServer\Drivers\HP\LJ400\hpljm401.inf,Accounts-HP-LJ
+WS-ACCOUNTS-01,jsmith,\\PrintServer\Accounts-Canon,10.10.5.21,Canon iR-ADV C5235,\\FileServer\Drivers\Canon\iRADV5235\cnz7dkd.inf,
+WS-ACCOUNTS-01,mwilliams,\\PrintServer\Accounts-HP-LJ,10.10.5.20,HP LaserJet 400 M401,\\FileServer\Drivers\HP\LJ400\hpljm401.inf,
+WS-ACCOUNTS-01,mwilliams,\\PrintServer\Accounts-Canon,10.10.5.21,Canon iR-ADV C5235,\\FileServer\Drivers\Canon\iRADV5235\cnz7dkd.inf,Accounts-Canon
+WS-HR-02,*,\\PrintServer\HR-Colour,10.10.6.10,Xerox WorkCentre 6515,\\FileServer\Drivers\Xerox\WC6515\xrxwc65.inf,
+WS-HR-02,*,\\PrintServer\HR-Mono,10.10.6.11,Xerox WorkCentre 6515,,HR-Mono
+*,*,\\OldPrintServer\Reception,\\NewPrintServer\Reception,,,
+*,*,\\OldPrintServer\Boardroom,\\NewPrintServer\Boardroom,,,

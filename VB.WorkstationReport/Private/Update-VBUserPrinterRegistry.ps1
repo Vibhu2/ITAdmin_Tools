@@ -1,8 +1,8 @@
 # ============================================================
 # FUNCTION : Update-VBUserPrinterRegistry
 # MODULE   : VB.WorkstationReport
-# VERSION  : 1.0.0
-# CHANGED  : 23-04-2026 -- Initial release
+# VERSION  : 1.0.1
+# CHANGED  : 18-06-2026 -- Fix: use -LiteralPath for Connections key checks so forward slashes in printer names are not treated as path separators
 # AUTHOR   : Vibhu Bhatnagar
 # PURPOSE  : Applies printer path migrations to a single mounted user hive
 # ENCODING : UTF-8 with BOM
@@ -142,7 +142,9 @@ function Update-VBUserPrinterRegistry {
         $oldDeviceName = $null
 
         if ($isOldUNC) {
-            $oldFound      = Test-Path -Path "$connectPath\$oldKeyName"
+            # Use -LiteralPath: forward slashes in printer names (e.g. 'C5030/5035') are
+            # treated as path separators by the registry provider when using -Path.
+            $oldFound      = Test-Path -LiteralPath "$connectPath\$oldKeyName"
             $oldDeviceName = $oldPath   # in Devices key, UNC printer name IS the UNC path
         }
         else {
@@ -195,7 +197,7 @@ function Update-VBUserPrinterRegistry {
         # Step 5 -- Idempotency: check if new printer already mapped
         $newAlreadyExists = $false
         if ($isNewUNC) {
-            $newAlreadyExists = Test-Path -Path "$connectPath\$newKeyName"
+            $newAlreadyExists = Test-Path -LiteralPath "$connectPath\$newKeyName"
         }
         else {
             $deviceProps = Get-ItemProperty -Path $devicesPath -ErrorAction SilentlyContinue
@@ -215,7 +217,7 @@ function Update-VBUserPrinterRegistry {
         # If new already mapped AND old already gone -- fully migrated, nothing to do
         $oldStillPresent = $false
         if ($isOldUNC) {
-            $oldStillPresent = Test-Path -Path "$connectPath\$oldKeyName"
+            $oldStillPresent = Test-Path -LiteralPath "$connectPath\$oldKeyName"
         }
         else {
             $oldStillPresent = $null -ne $oldDeviceName
@@ -297,8 +299,8 @@ function Update-VBUserPrinterRegistry {
             # Step 7 -- Remove old printer entries
             if ($isOldUNC) {
                 $oldConnKeyPath = "$connectPath\$oldKeyName"
-                if (Test-Path -Path $oldConnKeyPath) {
-                    Remove-Item -Path $oldConnKeyPath -Recurse -Force
+                if (Test-Path -LiteralPath $oldConnKeyPath) {
+                    Remove-Item -LiteralPath $oldConnKeyPath -Recurse -Force
                     $actionsTaken.Add("Removed Connections key: $oldKeyName")
                 }
                 if (Test-Path -Path $devicesPath) {

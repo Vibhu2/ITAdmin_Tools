@@ -116,8 +116,16 @@ function Update-VBUserPrinterRegistry {
     foreach ($map in $Mappings) {
 
         # Step 1 -- Normalize paths
-        $oldPath = ($map.OldPath -replace '/', '\').TrimEnd('\').Trim()
-        $newPath = ($map.NewPath -replace '/', '\').TrimEnd('\').Trim()
+        # Only convert '/' to '\' when '/' is acting as a UNC path separator
+        # (path starts with '//'). Printer names can legitimately contain '/'
+        # (e.g. "Canon iR-ADV C5045/5051 UFR II") -- blindly replacing every
+        # '/' corrupted those names and broke the Printers\Connections key lookup.
+        $oldPath = $map.OldPath.Trim()
+        $newPath = $map.NewPath.Trim()
+        if ($oldPath -match '^//') { $oldPath = $oldPath -replace '/', '\' }
+        if ($newPath -match '^//') { $newPath = $newPath -replace '/', '\' }
+        $oldPath = $oldPath.TrimEnd('\')
+        $newPath = $newPath.TrimEnd('\')
 
         $isOldUNC = $oldPath -match '^\\\\'
         $isNewUNC = $newPath -match '^\\\\'
